@@ -13,6 +13,31 @@ The `opm-troubleshooting` plugin provides AI-powered commands for diagnosing OLM
 - 🤖 **AI Agents**: Automated troubleshooting workflows with intelligent diagnosis
 - 🚀 **Pure Go**: No external dependencies on `opm`, `jq`, or `skopeo` binaries
 
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph cli [CLI]
+    flags["--catalog --package --channel"]
+    env_var["DOCKER_CONFIG env"]
+  end
+
+  subgraph internal_catalog [internal/catalog]
+    render["action.Render"]
+    resolve["ResolveChannelHead"]
+  end
+
+  subgraph internal_image [internal/image]
+    inspect["remote.Image + ConfigFile"]
+  end
+
+  flags --> render
+  env_var --> render
+  env_var --> inspect
+  render --> resolve
+  resolve --> inspect
+  inspect --> out["stdout: package/bundle/version/commit/url"]
+```
 ## Installation
 
 ### Prerequisites
@@ -181,7 +206,7 @@ Available agents:
 - **Subscription Troubleshooter**: Debug OLM Subscription failures
 - **Version Resolver**: Find which bundle contains a specific commit
 
-## Architecture
+## Implementation
 
 ### Pure Go Implementation
 
@@ -247,6 +272,28 @@ export REGISTRY_AUTH_FILE=/path/to/auth.json
     }
   }
 }
+```
+
+### Build Dependencies
+
+The plugin uses a pure Go build tag to avoid the `gpgme` C library dependency:
+
+```bash
+# Build uses containers_image_openpgp tag (no gpgme needed)
+make build
+```
+
+If you encounter build errors related to `gpgme`, install the development library:
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install libgpgme-dev
+
+# Fedora/RHEL
+sudo dnf install gpgme-devel
+
+# macOS
+brew install gpgme
 ```
 
 ### Timeout Configuration

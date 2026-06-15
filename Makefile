@@ -10,7 +10,9 @@ help:
 
 build:
 	@mkdir -p $(BIN_DIR)
-	go build -o $(BIN_DIR)/$(BINARY) $(CMD)
+	# Build with containers_image_openpgp tag to avoid gpgme dependency
+	# Alternatively, install libgpgme-dev (Ubuntu/Debian) or gpgme-devel (Fedora/RHEL)
+	go build -tags containers_image_openpgp -o $(BIN_DIR)/$(BINARY) $(CMD)
 
 test:
 	go test -race -cover ./internal/...
