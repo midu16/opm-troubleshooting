@@ -1,0 +1,14 @@
+{
+  "name": "opm-troubleshooting",
+  "owner": {
+    "name": "midu16"
+  },
+  "plugins": [
+    {
+      "name": "opm-troubleshooting",
+      "source": ".",
+      "description": "OLM catalog bundle inspection and operator troubleshooting toolkit with pure Go implementation",
+      "version": "1.0.0"
+    }
+  ]
+}

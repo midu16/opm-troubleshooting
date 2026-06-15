@@ -50,10 +50,10 @@ flowchart LR
 
 ```bash
 # Add the ai-helpers marketplace (if not already added)
-/plugin marketplace add midu16/ai-helpers
+/plugin marketplace add midu16/opm-troubleshooting
 
 # Install the opm-troubleshooting plugin
-/plugin install opm-troubleshooting@ai-helpers
+/plugin install opm-troubleshooting@opm-troubleshooting
 ```
 
 ### Verify Installation
