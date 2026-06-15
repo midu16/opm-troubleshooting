@@ -1,0 +1,502 @@
+[
+  {
+    "package": "3scale-operator",
+    "channel": "threescale-2.13"
+  },
+  {
+    "package": "advanced-cluster-management",
+    "channel": "release-2.16"
+  },
+  {
+    "package": "amq-broker-rhel8",
+    "channel": "7.12.x"
+  },
+  {
+    "package": "amq-broker-rhel9",
+    "channel": "7.14.x"
+  },
+  {
+    "package": "amq-streams",
+    "channel": "stable"
+  },
+  {
+    "package": "amq-streams-console",
+    "channel": "stable"
+  },
+  {
+    "package": "amq-streams-proxy",
+    "channel": "stable"
+  },
+  {
+    "package": "amq7-interconnect-operator",
+    "channel": "1.10.x"
+  },
+  {
+    "package": "ansible-automation-platform-operator",
+    "channel": "stable-2.7"
+  },
+  {
+    "package": "ansible-cloud-addons-operator",
+    "channel": "stable-2.5-cluster-scoped"
+  },
+  {
+    "package": "apicast-operator",
+    "channel": "threescale-2.14"
+  },
+  {
+    "package": "apicurio-registry-3",
+    "channel": "3.x"
+  },
+  {
+    "package": "authorino-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "aws-efs-csi-driver-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "aws-load-balancer-operator",
+    "channel": "stable-v1"
+  },
+  {
+    "package": "bamoe-businessautomation-operator",
+    "channel": "8.x-stable"
+  },
+  {
+    "package": "bamoe-kogito-operator",
+    "channel": "8.x"
+  },
+  {
+    "package": "bpfman-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "businessautomation-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "cephcsi-operator",
+    "channel": "stable-4.21"
+  },
+  {
+    "package": "cincinnati-operator",
+    "channel": "v1"
+  },
+  {
+    "package": "cli-manager",
+    "channel": "tech-preview"
+  },
+  {
+    "package": "cluster-kube-descheduler-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "cluster-logging",
+    "channel": "stable-6.5"
+  },
+  {
+    "package": "cluster-observability-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "clusterresourceoverride",
+    "channel": "stable"
+  },
+  {
+    "package": "compliance-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "container-security-operator",
+    "channel": "stable-3.16"
+  },
+  {
+    "package": "cryostat-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "datagrid",
+    "channel": "stable"
+  },
+  {
+    "package": "devspaces",
+    "channel": "stable"
+  },
+  {
+    "package": "devworkspace-operator",
+    "channel": "fast"
+  },
+  {
+    "package": "dns-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "dpu-network-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "dpu-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "eap",
+    "channel": "stable"
+  },
+  {
+    "package": "external-dns-operator",
+    "channel": "stable-v1"
+  },
+  {
+    "package": "fence-agents-remediation",
+    "channel": "stable"
+  },
+  {
+    "package": "file-integrity-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "gatekeeper-operator-product",
+    "channel": "stable"
+  },
+  {
+    "package": "gcp-filestore-csi-driver-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "ingress-node-firewall",
+    "channel": "stable"
+  },
+  {
+    "package": "job-set",
+    "channel": "stable-v1.0"
+  },
+  {
+    "package": "jws-operator",
+    "channel": "alpha"
+  },
+  {
+    "package": "kernel-module-management",
+    "channel": "stable"
+  },
+  {
+    "package": "kernel-module-management-hub",
+    "channel": "stable"
+  },
+  {
+    "package": "kiali-ossm",
+    "channel": "stable"
+  },
+  {
+    "package": "kubernetes-nmstate-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "kubevirt-hyperconverged",
+    "channel": "stable"
+  },
+  {
+    "package": "kueue-operator",
+    "channel": "stable-v1.3"
+  },
+  {
+    "package": "leader-worker-set",
+    "channel": "stable-v1.0"
+  },
+  {
+    "package": "lifecycle-agent",
+    "channel": "stable"
+  },
+  {
+    "package": "lightspeed-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "limitador-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "local-storage-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "logic-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "logic-operator-rhel8",
+    "channel": "alpha"
+  },
+  {
+    "package": "loki-operator",
+    "channel": "stable-6.5"
+  },
+  {
+    "package": "machine-deletion-remediation",
+    "channel": "stable"
+  },
+  {
+    "package": "mcg-operator",
+    "channel": "stable-4.21"
+  },
+  {
+    "package": "mcp-gateway",
+    "channel": "preview"
+  },
+  {
+    "package": "metallb-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "mta-operator",
+    "channel": "stable-v8.0"
+  },
+  {
+    "package": "mtr-operator",
+    "channel": "alpha"
+  },
+  {
+    "package": "mtv-operator",
+    "channel": "release-v2.11"
+  },
+  {
+    "package": "multicluster-engine",
+    "channel": "stable-2.11"
+  },
+  {
+    "package": "netobserv-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "nfd",
+    "channel": "stable"
+  },
+  {
+    "package": "node-healthcheck-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "node-maintenance-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "node-observability-operator",
+    "channel": "alpha"
+  },
+  {
+    "package": "numaresources-operator",
+    "channel": "4.22"
+  },
+  {
+    "package": "o-cloud-manager",
+    "channel": "stable"
+  },
+  {
+    "package": "ocs-client-operator",
+    "channel": "stable-4.21"
+  },
+  {
+    "package": "ocs-operator",
+    "channel": "stable-4.21"
+  },
+  {
+    "package": "odf-csi-addons-operator",
+    "channel": "stable-4.21"
+  },
+  {
+    "package": "odf-dependencies",
+    "channel": "stable-4.21"
+  },
+  {
+    "package": "odf-external-snapshotter-operator",
+    "channel": "stable-4.21"
+  },
+  {
+    "package": "odf-multicluster-orchestrator",
+    "channel": "stable-4.21"
+  },
+  {
+    "package": "odf-operator",
+    "channel": "stable-4.21"
+  },
+  {
+    "package": "odf-prometheus-operator",
+    "channel": "stable-4.21"
+  },
+  {
+    "package": "odr-cluster-operator",
+    "channel": "stable-4.21"
+  },
+  {
+    "package": "odr-hub-operator",
+    "channel": "stable-4.21"
+  },
+  {
+    "package": "openshift-cert-manager-operator",
+    "channel": "stable-v1"
+  },
+  {
+    "package": "openshift-external-secrets-operator",
+    "channel": "stable-v1"
+  },
+  {
+    "package": "openshift-gitops-operator",
+    "channel": "latest"
+  },
+  {
+    "package": "openshift-pipelines-operator-rh",
+    "channel": "latest"
+  },
+  {
+    "package": "openshift-secondary-scheduler-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "opentelemetry-product",
+    "channel": "stable"
+  },
+  {
+    "package": "pf-status-relay-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "ptp-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "quay-bridge-operator",
+    "channel": "stable-3.16"
+  },
+  {
+    "package": "quay-operator",
+    "channel": "stable-3.16"
+  },
+  {
+    "package": "recipe",
+    "channel": "stable-4.21"
+  },
+  {
+    "package": "red-hat-hawtio-operator",
+    "channel": "v2"
+  },
+  {
+    "package": "redhat-oadp-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "rh-service-binding-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "rhacs-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "rhcl-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "rhpam-kogito-operator",
+    "channel": "7.x"
+  },
+  {
+    "package": "rhsso-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "rhtas-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "rook-ceph-operator",
+    "channel": "stable-4.21"
+  },
+  {
+    "package": "run-once-duration-override-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "runtimes-inventory-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "secrets-store-csi-driver-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "security-profiles-operator",
+    "channel": "release-alpha-rhel-8"
+  },
+  {
+    "package": "self-node-remediation",
+    "channel": "stable"
+  },
+  {
+    "package": "serverless-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "service-registry-operator",
+    "channel": "2.x"
+  },
+  {
+    "package": "servicemeshoperator",
+    "channel": "stable"
+  },
+  {
+    "package": "servicemeshoperator3",
+    "channel": "stable"
+  },
+  {
+    "package": "skupper-netobs-operator",
+    "channel": "stable-2"
+  },
+  {
+    "package": "skupper-operator",
+    "channel": "stable-2"
+  },
+  {
+    "package": "smb-csi-driver-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "sriov-network-operator",
+    "channel": "stable"
+  },
+  {
+    "package": "submariner",
+    "channel": "stable-0.24"
+  },
+  {
+    "package": "support-log-gather-operator",
+    "channel": "tech-preview"
+  },
+  {
+    "package": "tang-operator",
+    "channel": "alpha"
+  },
+  {
+    "package": "tempo-product",
+    "channel": "stable"
+  },
+  {
+    "package": "topology-aware-lifecycle-manager",
+    "channel": "stable"
+  },
+  {
+    "package": "vertical-pod-autoscaler",
+    "channel": "stable"
+  },
+  {
+    "package": "volsync-product",
+    "channel": "stable"
+  },
+  {
+    "package": "web-terminal",
+    "channel": "fast"
+  },
+  {
+    "package": "windows-machine-config-operator",
+    "channel": "stable"
+  }
+]

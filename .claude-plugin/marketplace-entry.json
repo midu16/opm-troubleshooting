@@ -1,0 +1,6 @@
+{
+  "name": "opm-troubleshooting",
+  "source": "./plugins/opm-troubleshooting",
+  "description": "OLM catalog bundle inspection and operator troubleshooting toolkit with pure Go implementation",
+  "version": "1.0.0"
+}

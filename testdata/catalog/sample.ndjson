@@ -1,0 +1,9 @@
+{"schema":"olm.package","name":"operator-a","defaultChannel":"stable"}
+{"schema":"olm.package","name":"operator-b","defaultChannel":"beta"}
+{"schema":"olm.channel","package":"operator-a","name":"stable","entries":[{"name":"operator-a.v0.1.0"},{"name":"operator-a.v0.2.0"}]}
+{"schema":"olm.channel","package":"operator-b","name":"beta","entries":[{"name":"operator-b.v1.0.0"}]}
+{"schema":"olm.channel","package":"operator-b","name":"stable","entries":[]}
+{"schema":"olm.bundle","package":"operator-a","name":"operator-a.v0.1.0","image":"quay.io/example/operator-a:v0.1.0"}
+{"schema":"olm.bundle","package":"operator-a","name":"operator-a.v0.2.0","image":"quay.io/example/operator-a:v0.2.0"}
+{"schema":"olm.bundle","package":"operator-b","name":"operator-b.v1.0.0","image":"quay.io/example/operator-b:v1.0.0"}
+{"schema":"olm.bundle","package":"operator-a","name":"operator-a.v0.3.0","image":""}

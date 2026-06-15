@@ -1,0 +1,49 @@
+# Binaries and build output
+/bin/
+bin/
+dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binaries and coverage
+*.test
+coverage.out
+coverage.html
+*.coverprofile
+
+# Go workspace
+go.work
+go.work.sum
+
+# Vendor (not used; keep tree clean if added later)
+vendor/
+
+# IDE and editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local env and credentials (never commit registry auth)
+.env
+.env.*
+!.env.example
+config.json
+docker-config/
+
+# Debug and profiling
+*.log
+debug
+debug.test
+*.pprof
+
+# Cursor / local tooling
+.cursor/
