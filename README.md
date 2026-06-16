@@ -40,6 +40,51 @@ flowchart LR
 ```
 ## Installation
 
+### Option 1: Download Pre-built Binaries
+
+Pre-built binaries are available for multiple architectures from GitHub Actions artifacts and releases.
+
+#### From GitHub Releases (Recommended)
+
+Download the latest release for your platform:
+
+```bash
+# For Linux AMD64
+curl -L -o catalog-bundle-inspect.tar.gz \
+  https://github.com/midu16/opm-troubleshooting/releases/latest/download/catalog-bundle-inspect-linux-amd64.tar.gz
+
+# For Linux ARM64
+curl -L -o catalog-bundle-inspect.tar.gz \
+  https://github.com/midu16/opm-troubleshooting/releases/latest/download/catalog-bundle-inspect-linux-arm64.tar.gz
+
+# Extract and install
+tar -xzf catalog-bundle-inspect.tar.gz
+sudo mv catalog-bundle-inspect-linux-* /usr/local/bin/catalog-bundle-inspect
+chmod +x /usr/local/bin/catalog-bundle-inspect
+
+# Verify installation
+catalog-bundle-inspect --help
+```
+
+#### Verify Checksums
+
+```bash
+# Download checksum file
+curl -L -o catalog-bundle-inspect.tar.gz.sha256 \
+  https://github.com/midu16/opm-troubleshooting/releases/latest/download/catalog-bundle-inspect-linux-amd64.tar.gz.sha256
+
+# Verify
+sha256sum -c catalog-bundle-inspect.tar.gz.sha256
+```
+
+#### Available Architectures
+
+- `linux-amd64` (x86_64)
+- `linux-arm64` (aarch64)
+- `linux-386` (x86 32-bit)
+
+### Option 2: Claude Code Plugin
+
 ### Prerequisites
 
 1. **Claude Code CLI** installed (v0.1.0+)
@@ -369,6 +414,35 @@ export RUN_INTEGRATION_TESTS=1
 export DOCKER_CONFIG=/path/to/config
 make test-integration
 ```
+
+### Building for Multiple Architectures
+
+Build cross-platform binaries:
+
+```bash
+# Build for Linux AMD64
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
+  go build -tags containers_image_openpgp \
+  -ldflags "-s -w" \
+  -o bin/catalog-bundle-inspect-linux-amd64 \
+  ./cmd/catalog-bundle-inspect
+
+# Build for Linux ARM64
+GOOS=linux GOARCH=arm64 CGO_ENABLED=0 \
+  go build -tags containers_image_openpgp \
+  -ldflags "-s -w" \
+  -o bin/catalog-bundle-inspect-linux-arm64 \
+  ./cmd/catalog-bundle-inspect
+
+# Build for Linux 386
+GOOS=linux GOARCH=386 CGO_ENABLED=0 \
+  go build -tags containers_image_openpgp \
+  -ldflags "-s -w" \
+  -o bin/catalog-bundle-inspect-linux-386 \
+  ./cmd/catalog-bundle-inspect
+```
+
+**CI/CD**: GitHub Actions automatically builds and uploads binaries for all platforms on every push to main and for releases.
 
 ### Plugin Structure
 

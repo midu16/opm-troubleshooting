@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            suffix: linux-amd64
+          - goos: linux
+            goarch: arm64
+            suffix: linux-arm64
+          - goos: linux
+            goarch: 386
+            suffix: linux-386
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build ${{ matrix.suffix }}
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          mkdir -p dist
+          VERSION="${GITHUB_REF#refs/tags/}"
+          go build -tags containers_image_openpgp \
+            -ldflags "-s -w -X main.version=${VERSION}" \
+            -o dist/catalog-bundle-inspect-${{ matrix.suffix }} \
+            ./cmd/catalog-bundle-inspect
+          chmod +x dist/catalog-bundle-inspect-${{ matrix.suffix }}
+
+      - name: Create tarball
+        run: |
+          cd dist
+          tar -czf catalog-bundle-inspect-${{ matrix.suffix }}.tar.gz catalog-bundle-inspect-${{ matrix.suffix }}
+          sha256sum catalog-bundle-inspect-${{ matrix.suffix }}.tar.gz > catalog-bundle-inspect-${{ matrix.suffix }}.tar.gz.sha256
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            dist/catalog-bundle-inspect-${{ matrix.suffix }}.tar.gz
+            dist/catalog-bundle-inspect-${{ matrix.suffix }}.tar.gz.sha256
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts (workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: catalog-bundle-inspect-${{ matrix.suffix }}
+          path: |
+            dist/catalog-bundle-inspect-${{ matrix.suffix }}.tar.gz
+            dist/catalog-bundle-inspect-${{ matrix.suffix }}.tar.gz.sha256
+          retention-days: 30
