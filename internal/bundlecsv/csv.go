@@ -19,10 +19,10 @@ var (
 )
 
 const (
-	annotationRepository            = "repository"
-	annotationFrameworkRepository   = "operators.operatorframework.io/repository"
-	annotationFrameworkSource       = "operators.operatorframework.io/source"
-	annotationSource                = "source"
+	annotationRepository          = "repository"
+	annotationFrameworkRepository = "operators.operatorframework.io/repository"
+	annotationFrameworkSource     = "operators.operatorframework.io/source"
+	annotationSource              = "source"
 )
 
 var repositoryAnnotationKeys = []string{
@@ -427,8 +427,4 @@ func normalizeGitRepoURL(u string) string {
 		return u
 	}
 	return ""
-}
-
-func isLikelyGitRepoURL(u string) bool {
-	return normalizeGitRepoURL(u) != ""
 }
