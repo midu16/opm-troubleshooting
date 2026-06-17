@@ -1,3 +1,7 @@
+---
+name: AGENTS
+description: 
+---
 # OPM Troubleshooting Agents
 
 This document defines AI agent workflows for automated OLM operator troubleshooting using the `opm-troubleshooting` toolkit.
