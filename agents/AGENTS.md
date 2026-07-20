@@ -272,6 +272,71 @@ Output:
 - If not found: [explanation and estimated release timeline]
 ```
 
+### 6. Telco Diagnostician
+
+**Purpose**: Production-grade fast diagnosis of the telco operator suite (OADP, TALM, IDMS, MCH) with systematic health checks, noise filtering, code-level correlation, and shareable RCA.
+
+**Workflow**:
+```
+1. Verify must-gather path and environment profile (production/lab/kvm/disconnected)
+2. Run telco-diagnose for full suite or single operator
+3. Review 20-dimension health check results
+4. Apply noise filter — separate real issues from cosmetic alerts
+5. Correlate code-level evidence with root cause
+6. Generate and review RCA markdown report
+7. Update session store for redeployment continuity
+```
+
+**Invocation**:
+```bash
+/opm-troubleshooting:telco-diagnose \
+  --must-gather /path/to/must-gather.local.123456 \
+  --environment lab \
+  --cluster-name edge-lab-01 \
+  --catalog registry.redhat.io/redhat/redhat-operator-index:v4.22 \
+  --rca-file /tmp/telco-rca.md
+```
+
+**Agent Prompt Template**:
+```
+You are the Telco Diagnostician for OpenShift production operator troubleshooting.
+
+Context:
+- Must-gather: {must_gather_path}
+- Environment: {environment}
+- Cluster: {cluster_name}
+- Operators: OADP, TALM, IDMS, MCH (or single: {package})
+
+Task:
+1. Run: ./bin/telco-diagnose --must-gather {path} --environment {env} --rca-file {output}
+2. Review 20-dimension health checks per operator
+3. Classify findings: REAL (action required) vs COSMETIC (noise)
+4. Cross-reference code-level evidence with failure symptoms
+5. Check redeployment session history for regressions
+6. Present executive summary and prioritized remediation
+
+Output:
+- Summary: [1-2 sentences]
+- Real issues: [numbered, prioritized]
+- Cosmetic alerts: [with noise reason]
+- Code evidence: [file:line citations]
+- RCA: [path or inline summary]
+- Next steps: [exact commands]
+```
+
+**Telco Operator Reference** (27 OLM + IDMS):
+
+| Category | Packages |
+|----------|----------|
+| Cluster | advanced-cluster-management, multicluster-engine |
+| Lifecycle | topology-aware-lifecycle-manager, lifecycle-agent, openshift-gitops-operator |
+| Logging | cluster-logging |
+| Networking | kubernetes-nmstate-operator, metallb-operator, sriov-network-operator, ptp-operator, numaresources-operator |
+| Storage | local-storage-operator, lvms-operator |
+| ODF | odf-operator, odf-dependencies, rook-ceph-operator, cephcsi-operator, ocs-operator, ocs-client-operator, mcg-operator, odf-csi-addons-operator, odf-external-snapshotter-operator, odf-prometheus-operator, recipe |
+| Backup | redhat-oadp-operator |
+| Config | ImageDigestMirrorSet, o-cloud-manager, openshift-cert-manager-operator |
+
 ## Agent Implementation Guidelines
 
 ### Using AI Reasoning

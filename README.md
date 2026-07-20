@@ -111,6 +111,31 @@ sha256sum -c catalog-bundle-inspect.tar.gz.sha256
 # - opm-troubleshooting:inspect-bundle
 # - opm-troubleshooting:resolve-channel
 # - opm-troubleshooting:batch-validate
+# - opm-troubleshooting:telco-diagnose
+```
+
+### Option 3: OpenCode
+
+OpenCode discovers commands and agents from `.opencode/` in the project, or via `opencode.json`.
+
+```bash
+# Clone or cd into the project
+cd opm-troubleshooting
+make build
+
+# OpenCode picks up automatically from:
+#   .opencode/commands/   — /telco-diagnose, /inspect-bundle, /batch-validate
+#   .opencode/agents/     — telco-diagnostician agent
+#   opencode.json         — command and agent registration
+
+# Run in OpenCode TUI:
+/telco-diagnose --must-gather /path/to/must-gather --environment lab --rca-file /tmp/rca.md
+```
+
+To use globally, symlink or copy `.opencode/` to your project:
+```bash
+ln -s /path/to/opm-troubleshooting/.opencode .opencode
+cp /path/to/opm-troubleshooting/opencode.json opencode.json
 ```
 
 ## Quick Start
@@ -176,6 +201,29 @@ OK     cluster-logging                 stable-5.9     version=v5.9.8 commit=def6
 Total: 2 OK, 1 PARTIAL, 0 FAIL
 ```
 
+### Example 4: Telco Suite Diagnosis
+
+```bash
+# Dedicated binary (recommended for telco production)
+./bin/telco-diagnose \
+  --must-gather /path/to/must-gather.local.123456 \
+  --environment lab \
+  --cluster-name edge-lab-01 \
+  --catalog registry.redhat.io/redhat/redhat-operator-index:v4.22 \
+  --rca-file /tmp/telco-rca.md
+
+# Or via Claude Code plugin
+/opm-troubleshooting:telco-diagnose \
+  --must-gather /path/to/must-gather \
+  --environment disconnected \
+  --rca-file /tmp/telco-rca.md
+
+# Or via OpenCode
+/telco-diagnose --must-gather /path/to/must-gather --environment lab
+```
+
+**Output**: 20-dimension health checks for the full telco production suite (27 operators + IDMS) with noise filtering, code correlation, and shareable RCA.
+
 ## Commands
 
 ### `inspect-bundle`
@@ -240,6 +288,25 @@ Batch validate multiple OLM operators from a catalog index.
 
 **See**: [commands/batch-validate.md](commands/batch-validate.md)
 
+### `telco-diagnose`
+
+Production-grade diagnosis of the telco operator suite (OADP, TALM, IDMS, MCH).
+
+**Synopsis**:
+```bash
+telco-diagnose --must-gather <path> [options]
+/opm-troubleshooting:telco-diagnose --must-gather <path> [options]
+/telco-diagnose --must-gather <path> [options]   # OpenCode
+```
+
+**Use Cases**:
+- Fast root-cause diagnosis after telco cluster redeployment
+- Systematic 20-dimension health checks with noise filtering
+- Code-level correlation and shareable RCA generation
+- Cross-redeployment session continuity
+
+**See**: [commands/telco-diagnose.md](commands/telco-diagnose.md)
+
 ## AI Agents
 
 The plugin includes specialized AI agents for automated troubleshooting workflows. See [agents/AGENTS.md](agents/AGENTS.md) for details.
@@ -250,6 +317,7 @@ Available agents:
 - **Catalog Quality Auditor**: Audit entire catalogs for metadata quality
 - **Subscription Troubleshooter**: Debug OLM Subscription failures
 - **Version Resolver**: Find which bundle contains a specific commit
+- **Telco Diagnostician**: Production diagnosis of OADP, TALM, IDMS, MCH (Claude + OpenCode)
 
 ## Implementation
 
@@ -453,14 +521,22 @@ opm-troubleshooting/
 ├── commands/
 │   ├── inspect-bundle.md        # Command: inspect-bundle
 │   ├── resolve-channel.md       # Command: resolve-channel
-│   └── batch-validate.md        # Command: batch-validate
+│   ├── batch-validate.md        # Command: batch-validate
+│   └── telco-diagnose.md        # Command: telco-diagnose
+├── .opencode/                   # OpenCode plugin (commands + agents)
+│   ├── commands/
+│   └── agents/
+├── opencode.json                # OpenCode project config
 ├── agents/
 │   └── AGENTS.md                # AI agent workflows
 ├── bin/
-│   └── catalog-bundle-inspect   # Go binary
+│   ├── catalog-bundle-inspect   # Go binary
+│   ├── batch-validate           # Batch validation
+│   └── telco-diagnose           # Telco production diagnosis
 ├── cmd/
 │   ├── catalog-bundle-inspect/  # CLI entrypoint
-│   └── batch-validate/          # Batch validation tool
+│   ├── batch-validate/          # Batch validation tool
+│   └── telco-diagnose/          # Telco diagnosis tool
 ├── internal/
 │   ├── catalog/                 # FBC rendering and resolution
 │   ├── imageinspect/            # Bundle image inspection
@@ -625,6 +701,6 @@ For issues or feature requests:
 
 ---
 
-**Version**: 1.0.0  
+**Version**: 1.1.0  
 **Author**: github.com/openshift-eng  
 **Plugin Type**: Operator Troubleshooting & Catalog Inspection

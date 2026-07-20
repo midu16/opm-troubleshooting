@@ -47,13 +47,20 @@ jobs:
             -ldflags "-s -w -X main.version=${VERSION}" \
             -o dist/catalog-bundle-inspect-${{ matrix.suffix }} \
             ./cmd/catalog-bundle-inspect
+          go build -tags containers_image_openpgp \
+            -ldflags "-s -w" \
+            -o dist/telco-diagnose-${{ matrix.suffix }} \
+            ./cmd/telco-diagnose
           chmod +x dist/catalog-bundle-inspect-${{ matrix.suffix }}
+          chmod +x dist/telco-diagnose-${{ matrix.suffix }}
 
       - name: Create tarball
         run: |
           cd dist
           tar -czf catalog-bundle-inspect-${{ matrix.suffix }}.tar.gz catalog-bundle-inspect-${{ matrix.suffix }}
+          tar -czf telco-diagnose-${{ matrix.suffix }}.tar.gz telco-diagnose-${{ matrix.suffix }}
           sha256sum catalog-bundle-inspect-${{ matrix.suffix }}.tar.gz > catalog-bundle-inspect-${{ matrix.suffix }}.tar.gz.sha256
+          sha256sum telco-diagnose-${{ matrix.suffix }}.tar.gz > telco-diagnose-${{ matrix.suffix }}.tar.gz.sha256
 
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
@@ -62,6 +69,8 @@ jobs:
           files: |
             dist/catalog-bundle-inspect-${{ matrix.suffix }}.tar.gz
             dist/catalog-bundle-inspect-${{ matrix.suffix }}.tar.gz.sha256
+            dist/telco-diagnose-${{ matrix.suffix }}.tar.gz
+            dist/telco-diagnose-${{ matrix.suffix }}.tar.gz.sha256
           draft: false
           prerelease: false
         env:

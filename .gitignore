@@ -13,6 +13,9 @@ dist/
 coverage.out
 coverage.html
 *.coverprofile
+catalog-bundle-inspect
+opm-diagnose
+telco-diagnose
 
 # Go workspace
 go.work
@@ -47,3 +50,6 @@ debug.test
 
 # Cursor / local tooling
 .cursor/
+
+# 
+CLAUDE.md
