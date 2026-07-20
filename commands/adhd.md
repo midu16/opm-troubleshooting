@@ -12,6 +12,9 @@ opm-troubleshooting:adhd
 /opm-troubleshooting:adhd --catalog <catalog-image> --package <name> [--channel <channel>] 'describe your OLM problem'
 ```
 
+## Attribution
+Divergent ideation framework inspired by [ADHD-Agent](https://github.com/UditAkhourii/adhd) (MIT License). Adapted with OLM-specific cognitive frames and integration with existing OPM tools.
+
 ## Description
 The `opm-troubleshooting:adhd` command applies **divergent ideation** to OLM troubleshooting by spawning parallel diagnostic approaches across multiple cognitive frames. Unlike single-path debugging, this explores 30+ potential root causes or solutions simultaneously using isolated reasoning branches that can't anchor each other.
 
@@ -67,7 +70,16 @@ Structured output with:
   "Bundle shows PARTIAL status - missing commit SHA and repository URL in image labels"
 ```
 
-**Integration**: Before divergence, runs `inspect-bundle` to get current metadata state. Uses output as seed for divergent thinking about why labels are missing.
+**Integration**: 
+1. Runs `inspect-bundle --json` to get current metadata state (seed data)
+2. Spawns 5 branches: Registry Auditor, Bundle Forensics, Channel Historian, Catalog Architect, Naive User
+3. Each branch generates 6 hypotheses about why labels are missing
+4. Converges to top 3 with verification steps using `inspect-bundle`
+
+**Expected Output Structure**:
+- Wide set grouped by cluster (Label Inheritance, Build Process, Channel History)
+- ★ Non-obvious pick: "Base image lacks commit labels → bundle inherits empty values"
+- Focus: Sketch + risk + first step (e.g., "Check base image with `skopeo inspect`")
 
 ### Example 2: Channel migration produces unexpected behavior
 ```bash
@@ -78,7 +90,17 @@ Structured output with:
   "Migrating from stable-4.21 to stable-4.22 causes subscription failure - what could be the root cause?"
 ```
 
-**Integration**: Uses `resolve-channel` to verify both channels exist, then runs `inspect-bundle` on both heads to seed divergence with version/commit differences.
+**Integration**: 
+1. Uses `resolve-channel` to verify both channels exist (seed data)
+2. Runs `inspect-bundle` on both channel heads for version/commit comparison
+3. Spawns 5 branches: Channel Historian, Subscription Simulator, Bundle Forensics, Attacker Frame, OLM Internals
+4. Diverges on breaking changes, dependency shifts, label format changes
+5. Converges with migration verification steps
+
+**Key Diagnostic Questions**:
+- Which version introduced the breaking change?
+- Are there missing `olm.package` declarations in target channel?
+- What InstallPlan would be generated and where does it fail?
 
 ### Example 3: Pattern in batch validation failures
 ```bash
@@ -87,7 +109,74 @@ Structured output with:
   "Multiple operators showing PARTIAL status - missing commit metadata. Is this a systematic issue or per-operator?"
 ```
 
-**Integration**: Runs `batch-validate` first to get full picture, then diverges on whether the pattern indicates catalog build process issues vs individual operator Dockerfile problems.
+**Integration**: 
+1. Runs `batch-validate` to get full picture (seed data)
+2. Spawns 5 branches: Catalog Architect, Registry Auditor, Bundle Forensics, Regulator Frame, Biology/Evolution
+3. Diverges on whether pattern indicates systematic issue vs per-operator problems
+4. Converges with catalog build process improvements or per-operator Dockerfile fixes
+
+**Output Highlights**:
+- Cluster analysis: "Systematic (70%)" vs "Per-operator (30%)"
+- ★ Non-obvious pick: "Catalog build pipeline drops labels in final stage"
+- Focus: Verification steps using `batch-validate` on subset, then deep-dive on affected operators
+
+## Advanced Integration Patterns
+
+### Pattern A: Chaining with Existing Agents
+```bash
+# Step 1: Use ADHD to explore diagnostic approaches
+/opm-troubleshooting:adhd \
+  --catalog ... --package ... "PARTIAL status issue"
+
+# Step 2: Follow up with targeted agent for deep investigation
+/opm-troubleshooting:analyze-metadata \
+  --catalog ... --package ... 
+```
+
+### Pattern B: Iterative Refinement
+```bash
+# First pass: Broad exploration (5 frames)
+OPM_AHDH_FRAMES="registry-auditor,bundle-forensics,channel-historian" \
+/opm-troubleshooting:adhd --catalog ... --package ... "problem"
+
+# Second pass: Deep dive on promising cluster (3 frames)
+OPM_AHDH_FRAMES="bundle-forensics,catalog-architect" \
+OPM_AHDH_TOP_K=5 \
+/opm-troubleshooting:adhd --catalog ... --package ... "problem"
+```
+
+### Pattern C: Batch Pattern Detection
+```bash
+# Step 1: Identify patterns with batch-validate
+/opm-troubleshooting:batch-validate --catalog ... --list operators.txt > results.txt
+
+# Step 2: Use ADHD to interpret the pattern
+grep PARTIAL results.txt | awk '{print $1}' > partial-operators.txt
+cat partial-operators.txt | xargs -I {} \
+  /opm-troubleshooting:adhd --catalog ... --package {} "missing commit metadata"
+```
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OPM_AHDH_FRAMES` | Auto-selected | Override which cognitive frames to use (comma-separated) |
+| `OPM_AHDH_TOP_K` | 3 | Number of ideas to deepen/focus on |
+| `OPM_AHDH_CONCURRENCY` | 4 | Maximum parallel LLM calls during divergence |
+
+### Frame Selection Strategy
+
+By default, the command selects frames based on problem context:
+
+- **Code-shaped problems** (image pulls, metadata extraction): 4 code/design frames + 1 wild frame
+- **Design-shaped problems** (channel topology, migration paths): 3 design frames + 2 code frames + 1 wild frame
+- **Open-ended strategy**: Mix from all tags, ensure at least one wildcard
+
+Override with `OPM_AHDH_FRAMES`:
+```bash
+export OPM_AHDH_FRAMES="registry-auditor,bundle-forensics,channel-historian"
+/opm-troubleshooting:adhd --catalog ... --package ... "problem description"
+```
 
 ## Arguments
 
