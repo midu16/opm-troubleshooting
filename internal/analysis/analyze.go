@@ -22,6 +22,7 @@ import (
 	"github.com/midu16/opm-troubleshooting/internal/mustgather"
 	"github.com/midu16/opm-troubleshooting/internal/noise"
 	"github.com/midu16/opm-troubleshooting/internal/openshift"
+	"github.com/midu16/opm-troubleshooting/internal/rag"
 	rcamod "github.com/midu16/opm-troubleshooting/internal/rca"
 	"github.com/midu16/opm-troubleshooting/internal/session"
 	"github.com/midu16/opm-troubleshooting/internal/telco"
@@ -80,6 +81,29 @@ func AnalyzeMustGather(ctx context.Context, cfg AnalysisConfig) (*AnalysisResult
 		result.Errors = append(result.Errors, fmt.Errorf("claude API client: %w", err))
 	}
 
+	// 3b. Initialize RAG engine (optional)
+	var ragEngine *rag.Engine
+	if cfg.RAGEnabled {
+		ragCfgPath := cfg.RAGConfigPath
+		if ragCfgPath == "" {
+			ragCfgPath = "rag-config.yaml"
+		}
+		ragCfg, ragErr := rag.LoadConfig(ragCfgPath)
+		if ragErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: RAG config: %v\n", ragErr)
+		} else {
+			if cfg.RAGDataDir != "" {
+				ragCfg.DataDir = cfg.RAGDataDir
+			}
+			ragEngine, err = rag.NewEngine(ragCfg)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: RAG engine: %v\n", err)
+			} else {
+				defer ragEngine.Close()
+			}
+		}
+	}
+
 	// 4a. Open metadata store for learning and correlation
 	var metaStore *metadata.MetadataStore
 	if cfg.MetadataDir != "" || cfg.EnableLearning || cfg.EnableRepoCorrelation {
@@ -120,7 +144,7 @@ func AnalyzeMustGather(ctx context.Context, cfg AnalysisConfig) (*AnalysisResult
 
 	// 5. Analyze each target operator
 	for _, op := range targets {
-		report := analyzeSingleOperator(ctx, op, catalogCfg, cfg, claudeClient, metaStore)
+		report := analyzeSingleOperator(ctx, op, catalogCfg, cfg, claudeClient, metaStore, ragEngine)
 		result.FaultyReports = append(result.FaultyReports, report)
 
 		if cfg.GenerateRCA && report.RCADocument != nil {
@@ -241,6 +265,7 @@ func analyzeSingleOperator(
 	cfg AnalysisConfig,
 	claudeClient *claudeapi.Client,
 	metaStore *metadata.MetadataStore,
+	ragEngine *rag.Engine,
 ) FaultReport {
 	report := FaultReport{
 		Operator:        op,
@@ -375,6 +400,17 @@ func analyzeSingleOperator(
 		}
 	}
 
+	// Step 5.5: RAG knowledge base enrichment
+	if ragEngine != nil {
+		ragSymptoms := buildRAGSymptoms(report)
+		ragResult, ragErr := ragEngine.Troubleshoot(ctx, op.PackageName, ragSymptoms, "")
+		if ragErr != nil {
+			fmt.Fprintf(os.Stderr, "  Warning: RAG lookup: %v\n", ragErr)
+		} else {
+			report.RAGContext = ragResult
+		}
+	}
+
 	// Step 6: Infrastructure health checks (via must-gather data source)
 	mgSource := datasource.NewMustGatherSource(cfg.MustGatherPath)
 	infraReport, err := healthcheck.RunInfra(healthcheck.InfraConfig{DataSource: mgSource})
@@ -385,6 +421,11 @@ func analyzeSingleOperator(
 	// Step 7: ADHD multi-frame divergent analysis
 	if cfg.ADHDEnabled && claudeClient != nil {
 		symptoms := collectAnalysisSymptoms(report)
+		if report.RAGContext != nil {
+			for _, ki := range report.RAGContext.KnownIssues {
+				symptoms = append(symptoms, fmt.Sprintf("[Known Issue %s] %s", ki.ID, ki.Summary))
+			}
+		}
 		snapshot, snapErr := adhd.BuildClusterSnapshot(mgSource)
 		if snapErr != nil {
 			report.Errors = append(report.Errors, fmt.Errorf("cluster snapshot: %w", snapErr))
@@ -492,6 +533,7 @@ func analyzeSingleOperator(
 			ADHDResult:       report.ADHDResult,
 			Session:          cfg.Session,
 			RepoCorrelation:  convertCorrelation(report.RepoCorrelation),
+			RAGContext:       convertRAGContext(report.RAGContext),
 			SimilarIssues:    report.SimilarIssues,
 			LearningInsights: report.LearningInsights,
 		}
@@ -673,6 +715,24 @@ func collectAnalysisSymptoms(report FaultReport) []string {
 	return symptoms
 }
 
+func buildRAGSymptoms(report FaultReport) []string {
+	symptoms := make([]string, 0)
+	if report.Operator.FailureReason != "" {
+		symptoms = append(symptoms, report.Operator.FailureReason)
+	}
+	if report.Operator.CurrentCSV != "" {
+		symptoms = append(symptoms, fmt.Sprintf("Current CSV: %s", report.Operator.CurrentCSV))
+	}
+	if report.HealthReport != nil {
+		for _, dim := range report.HealthReport.Dimensions {
+			if dim.Status == healthcheck.StatusFail {
+				symptoms = append(symptoms, fmt.Sprintf("%s: %s", dim.Name, dim.Summary))
+			}
+		}
+	}
+	return symptoms
+}
+
 func convertSimilarIssues(issues []learning.SimilarIssue) []rcamod.SimilarIssueData {
 	if len(issues) == 0 {
 		return nil
@@ -748,6 +808,40 @@ func convertCorrelation(c *openshift.Correlation) *rcamod.RepoCorrelationData {
 			Hash:    commit.Hash,
 			Subject: commit.Subject,
 			Author:  commit.Author,
+		})
+	}
+	return result
+}
+
+func convertRAGContext(r *rag.TroubleshootResult) *rcamod.RAGContextData {
+	if r == nil {
+		return nil
+	}
+	result := &rcamod.RAGContextData{
+		Summary:    r.Summary,
+		Confidence: r.Confidence,
+	}
+	for _, ref := range r.DocumentationRefs {
+		result.DocumentationRefs = append(result.DocumentationRefs, rcamod.RAGDocRef{
+			Title:   ref.Title,
+			Source:  ref.Source,
+			Excerpt: ref.Excerpt,
+			URL:     ref.URL,
+		})
+	}
+	for _, ki := range r.KnownIssues {
+		result.KnownIssues = append(result.KnownIssues, rcamod.RAGKnownIssue{
+			ID:         ki.ID,
+			Summary:    ki.Summary,
+			Workaround: ki.Workaround,
+			FixVersion: ki.FixVersion,
+		})
+	}
+	for _, ca := range r.ConfigAdvice {
+		result.ConfigAdvice = append(result.ConfigAdvice, rcamod.RAGConfigAdvice{
+			Component: ca.Component,
+			Reference: ca.Reference,
+			Advice:    ca.Advice,
 		})
 	}
 	return result

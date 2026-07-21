@@ -86,6 +86,11 @@ type config struct {
 	enableLearning    bool
 	enableRepoCorr    bool
 	githubToken       string
+
+	// RAG knowledge base
+	ragEnabled    bool
+	ragConfigPath string
+	ragDataDir    string
 }
 
 var errHelp = errors.New("help requested")
@@ -397,6 +402,9 @@ func runMustGatherAnalysis(ctx context.Context, cfg *config) error {
 			EnableLearning:        cfg.enableLearning,
 			EnableRepoCorrelation: cfg.enableRepoCorr,
 			GitHubToken:           cfg.githubToken,
+			RAGEnabled:    cfg.ragEnabled,
+			RAGConfigPath: cfg.ragConfigPath,
+			RAGDataDir:    cfg.ragDataDir,
 		}
 
 		result, err := analysis.AnalyzeMustGather(ctx, analysisConfig)

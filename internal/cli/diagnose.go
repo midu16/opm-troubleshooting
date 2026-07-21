@@ -19,6 +19,7 @@ import (
 	"github.com/midu16/opm-troubleshooting/internal/metadata"
 	"github.com/midu16/opm-troubleshooting/internal/noise"
 	"github.com/midu16/opm-troubleshooting/internal/openshift"
+	"github.com/midu16/opm-troubleshooting/internal/rag"
 	"github.com/midu16/opm-troubleshooting/internal/rca"
 )
 
@@ -50,6 +51,10 @@ type diagnoseConfig struct {
 	enableLearning bool
 	enableRepoCorr bool
 	githubToken    string
+
+	ragEnabled    bool
+	ragConfigPath string
+	ragDataDir    string
 }
 
 // RunDiagnose executes the unified diagnostic CLI supporting both kubeconfig and must-gather.
@@ -115,6 +120,11 @@ func parseDiagnoseArgs(args []string) (*diagnoseConfig, error) {
 	fs.BoolVar(&cfg.enableLearning, "learning", true, "Enable self-learning from past sessions")
 	fs.BoolVar(&cfg.enableRepoCorr, "repo-correlation", true, "Enable OpenShift repo correlation for issue classification")
 	fs.StringVar(&cfg.githubToken, "github-token", "", "GitHub token for issue search (default: GH_TOKEN env var)")
+
+	// RAG knowledge base flags
+	fs.BoolVar(&cfg.ragEnabled, "rag", false, "Enable RAG knowledge base enrichment")
+	fs.StringVar(&cfg.ragConfigPath, "rag-config", "", "RAG config file (default: rag-config.yaml)")
+	fs.StringVar(&cfg.ragDataDir, "rag-data", "", "RAG data directory (default: rag-data)")
 
 	// Output flags
 	fs.BoolVar(&cfg.jsonOut, "json", false, "Output JSON")
@@ -216,6 +226,9 @@ func runMustGatherDiagnosis(ctx context.Context, cfg *diagnoseConfig) error {
 		enableLearning: cfg.enableLearning,
 		enableRepoCorr: cfg.enableRepoCorr,
 		githubToken:    cfg.githubToken,
+		ragEnabled:    cfg.ragEnabled,
+		ragConfigPath: cfg.ragConfigPath,
+		ragDataDir:    cfg.ragDataDir,
 	}
 	return runMustGatherAnalysis(ctx, mgCfg)
 }
@@ -242,6 +255,59 @@ func runDataSourceAnalysis(ctx context.Context, src datasource.ClusterDataSource
 
 	// 2. Collect symptoms for ADHD analysis
 	symptoms := collectSymptoms(infraReport)
+
+	// 2b. RAG knowledge base enrichment
+	var ragContext *rca.RAGContextData
+	if cfg.ragEnabled {
+		ragCfgPath := cfg.ragConfigPath
+		if ragCfgPath == "" {
+			ragCfgPath = "rag-config.yaml"
+		}
+		ragCfg, ragErr := rag.LoadConfig(ragCfgPath)
+		if ragErr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: RAG config: %v\n", ragErr)
+		} else {
+			if cfg.ragDataDir != "" {
+				ragCfg.DataDir = cfg.ragDataDir
+			}
+			ragEngine, ragErr := rag.NewEngine(ragCfg)
+			if ragErr != nil {
+				fmt.Fprintf(os.Stderr, "Warning: RAG engine: %v\n", ragErr)
+			} else {
+				defer ragEngine.Close()
+				fmt.Fprintln(os.Stderr, "Querying RAG knowledge base...")
+				ragResult, ragErr := ragEngine.Troubleshoot(ctx, "cluster-infrastructure", symptoms, "")
+				if ragErr != nil {
+					fmt.Fprintf(os.Stderr, "Warning: RAG lookup: %v\n", ragErr)
+				} else {
+					ragContext = &rca.RAGContextData{
+						Summary:    ragResult.Summary,
+						Confidence: ragResult.Confidence,
+					}
+					for _, ref := range ragResult.DocumentationRefs {
+						ragContext.DocumentationRefs = append(ragContext.DocumentationRefs, rca.RAGDocRef{
+							Title: ref.Title, Source: ref.Source, Excerpt: ref.Excerpt, URL: ref.URL,
+						})
+					}
+					for _, ki := range ragResult.KnownIssues {
+						ragContext.KnownIssues = append(ragContext.KnownIssues, rca.RAGKnownIssue{
+							ID: ki.ID, Summary: ki.Summary, Workaround: ki.Workaround, FixVersion: ki.FixVersion,
+						})
+					}
+					for _, ca := range ragResult.ConfigAdvice {
+						ragContext.ConfigAdvice = append(ragContext.ConfigAdvice, rca.RAGConfigAdvice{
+							Component: ca.Component, Reference: ca.Reference, Advice: ca.Advice,
+						})
+					}
+					for _, ki := range ragResult.KnownIssues {
+						symptoms = append(symptoms, fmt.Sprintf("[Known Issue %s] %s", ki.ID, ki.Summary))
+					}
+					fmt.Fprintf(os.Stderr, "RAG: %d docs, %d known issues, confidence %.0f%%\n",
+						len(ragResult.DocumentationRefs), len(ragResult.KnownIssues), ragResult.Confidence*100)
+				}
+			}
+		}
+	}
 
 	// 3. ADHD multi-frame divergent analysis
 	var adhdResult *adhd.DiagnosisResult
@@ -362,6 +428,7 @@ func runDataSourceAnalysis(ctx context.Context, src datasource.ClusterDataSource
 			NoiseReport:      noiseReport,
 			ADHDResult:       adhdResult,
 			RepoCorrelation:  repoCorrelation,
+			RAGContext:       ragContext,
 			SimilarIssues:    similarIssues,
 			LearningInsights: learningInsights,
 		}

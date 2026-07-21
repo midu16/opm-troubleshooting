@@ -51,5 +51,9 @@ debug.test
 # GoReleaser
 /dist/
 
+# RAG knowledge base data (populated by ocp-rag-ingest)
+rag-data/
+.ingest_meta.json
+
 # Claude Code
 CLAUDE.md

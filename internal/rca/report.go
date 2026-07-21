@@ -44,6 +44,7 @@ type ReportInput struct {
 	Session          *session.Record
 	ADHDResult       *adhd.DiagnosisResult
 	RepoCorrelation  *RepoCorrelationData
+	RAGContext       *RAGContextData
 	SimilarIssues    []SimilarIssueData
 	LearningInsights *LearningInsightsData
 }
@@ -118,6 +119,38 @@ type PatternStatData struct {
 	Confidence float64
 }
 
+// RAGContextData holds RAG knowledge base results for the report.
+type RAGContextData struct {
+	Summary           string
+	DocumentationRefs []RAGDocRef
+	KnownIssues       []RAGKnownIssue
+	ConfigAdvice      []RAGConfigAdvice
+	Confidence        float64
+}
+
+// RAGDocRef is a documentation reference from the RAG knowledge base.
+type RAGDocRef struct {
+	Title   string
+	Source  string
+	Excerpt string
+	URL     string
+}
+
+// RAGKnownIssue is a known issue from the RAG knowledge base.
+type RAGKnownIssue struct {
+	ID         string
+	Summary    string
+	Workaround string
+	FixVersion string
+}
+
+// RAGConfigAdvice is a configuration recommendation from the RAG knowledge base.
+type RAGConfigAdvice struct {
+	Component string
+	Reference string
+	Advice    string
+}
+
 // GenerateDocument produces a professional Markdown RCA from analysis results.
 func GenerateDocument(input ReportInput) Document {
 	now := time.Now().UTC()
@@ -136,6 +169,7 @@ func GenerateDocument(input ReportInput) Document {
 	writeRootCause(&b, input)
 	writeADHDAnalysis(&b, input)
 	writeSourceCodeCorrelation(&b, input)
+	writeRAGContext(&b, input)
 	writeSimilarIssues(&b, input)
 	writeLearningInsights(&b, input)
 	writeCodeEvidence(&b, input)
@@ -686,6 +720,53 @@ func writeSourceCodeCorrelation(b *strings.Builder, input ReportInput) {
 				hashLen = 8
 			}
 			b.WriteString(fmt.Sprintf("- `%s` %s (%s)\n", c.Hash[:hashLen], c.Subject, c.Author))
+		}
+		b.WriteString("\n")
+	}
+}
+
+func writeRAGContext(b *strings.Builder, input ReportInput) {
+	if input.RAGContext == nil {
+		return
+	}
+	rag := input.RAGContext
+
+	b.WriteString("## Knowledge Base Evidence\n\n")
+
+	if rag.Confidence > 0 {
+		b.WriteString(fmt.Sprintf("**RAG Confidence**: %.0f%%\n\n", rag.Confidence*100))
+	}
+
+	if len(rag.KnownIssues) > 0 {
+		b.WriteString("### Known Issues\n\n")
+		b.WriteString("| ID | Summary | Workaround | Fix Version |\n")
+		b.WriteString("|-----|---------|------------|-------------|\n")
+		for _, ki := range rag.KnownIssues {
+			b.WriteString(fmt.Sprintf("| %s | %s | %s | %s |\n",
+				ki.ID, ki.Summary, ki.Workaround, ki.FixVersion))
+		}
+		b.WriteString("\n")
+	}
+
+	if len(rag.DocumentationRefs) > 0 {
+		b.WriteString("### Relevant Documentation\n\n")
+		b.WriteString("| Source | Title | Excerpt |\n")
+		b.WriteString("|--------|-------|--------|\n")
+		for _, ref := range rag.DocumentationRefs {
+			excerpt := ref.Excerpt
+			if len(excerpt) > 120 {
+				excerpt = excerpt[:120] + "..."
+			}
+			b.WriteString(fmt.Sprintf("| %s | %s | %s |\n",
+				ref.Source, ref.Title, excerpt))
+		}
+		b.WriteString("\n")
+	}
+
+	if len(rag.ConfigAdvice) > 0 {
+		b.WriteString("### Configuration Recommendations\n\n")
+		for _, ca := range rag.ConfigAdvice {
+			b.WriteString(fmt.Sprintf("- **%s** (%s): %s\n", ca.Component, ca.Reference, ca.Advice))
 		}
 		b.WriteString("\n")
 	}

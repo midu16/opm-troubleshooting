@@ -10,6 +10,7 @@ import (
 	"github.com/midu16/opm-troubleshooting/internal/mustgather"
 	"github.com/midu16/opm-troubleshooting/internal/noise"
 	"github.com/midu16/opm-troubleshooting/internal/openshift"
+	"github.com/midu16/opm-troubleshooting/internal/rag"
 	"github.com/midu16/opm-troubleshooting/internal/rca"
 	"github.com/midu16/opm-troubleshooting/internal/session"
 	"github.com/midu16/opm-troubleshooting/internal/telco"
@@ -42,6 +43,11 @@ type AnalysisConfig struct {
 	EnableLearning        bool
 	EnableRepoCorrelation bool
 	GitHubToken           string
+
+	// RAG knowledge base enrichment
+	RAGEnabled    bool
+	RAGConfigPath string
+	RAGDataDir    string
 }
 
 // FaultReport contains complete analysis for a single faulty operator.
@@ -60,6 +66,7 @@ type FaultReport struct {
 	CodeAnalysis    *codeanalysis.Result
 	ADHDResult      *adhd.DiagnosisResult
 	RepoCorrelation  *openshift.Correlation
+	RAGContext       *rag.TroubleshootResult
 	SimilarIssues    []rca.SimilarIssueData
 	LearningInsights *rca.LearningInsightsData
 	RCADocument     *rca.Document
