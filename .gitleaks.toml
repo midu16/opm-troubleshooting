@@ -1,0 +1,13 @@
+[extend]
+useDefault = true
+
+title = "opm-troubleshooting gitleaks config"
+
+[allowlist]
+description = "Global allowlist"
+paths = [
+    '''go\.sum''',
+    '''vendor/''',
+    '''testdata/''',
+    '''\.github/workflows/''',
+]

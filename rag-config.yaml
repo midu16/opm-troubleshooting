@@ -1,0 +1,69 @@
+data_dir: rag-data
+embedding:
+  url: "http://bazzite:11434"
+  model: "qwen3-embedding:latest"
+openshift:
+  version: "4.22"
+  docs_base_url: "https://docs.redhat.com/en/documentation/openshift_container_platform/4.22"
+  repos:
+    - cluster-etcd-operator
+    - cluster-kube-apiserver-operator
+    - cluster-kube-controller-manager-operator
+    - cluster-kube-scheduler-operator
+    - cluster-version-operator
+    - machine-config-operator
+    - cluster-network-operator
+    - cluster-ingress-operator
+    - cluster-storage-operator
+    - cluster-monitoring-operator
+    - cluster-authentication-operator
+    - local-storage-operator
+    - sriov-network-operator
+    - ptp-operator
+    - cluster-nfd-operator
+    - metallb-operator
+    - cluster-node-tuning-operator
+    - cluster-dns-operator
+    - cluster-image-registry-operator
+    - cluster-samples-operator
+    - cluster-logging-operator
+    - openshift-apiserver
+    - console-operator
+    - installer
+    - oc
+    - api
+    - kubernetes-nmstate
+retrieval:
+  default_top_k: 8
+  code_top_k: 6
+  config_top_k: 4
+  issues_top_k: 5
+  keyword_supplement_max: 4
+  keyword_min_length: 4
+chunking:
+  chunk_size: 1200
+  chunk_overlap: 200
+ingestion:
+  git_timeout: "60s"
+  http_timeout: "30s"
+  max_parallel_clones: 4
+secret_filter:
+  skip_extensions:
+    - ".pem"
+    - ".crt"
+    - ".key"
+    - ".p12"
+    - ".jks"
+    - ".pfx"
+    - ".enc"
+    - ".gpg"
+  skip_filenames:
+    - ".env"
+    - "pull-secret"
+    - "kubeconfig"
+    - "credentials"
+    - "htpasswd"
+    - "id_rsa"
+    - "id_ed25519"
+freshness:
+  meta_file: ".ingest_meta.json"

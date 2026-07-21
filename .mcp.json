@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ocp-rag": {
+      "command": "/home/midu/opm-troubleshooting/bin/ocp-rag-server",
+      "args": ["--config", "/home/midu/opm-troubleshooting/rag-config.yaml"]
+    }
+  }
+}

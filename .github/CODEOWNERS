@@ -1,0 +1,10 @@
+# Default owner for everything in the repo
+* @midu16
+
+# CI/CD workflows
+.github/ @midu16
+
+# Core packages
+internal/catalog/ @midu16
+internal/rca/ @midu16
+internal/mustgather/ @midu16

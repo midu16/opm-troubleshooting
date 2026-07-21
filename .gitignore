@@ -1,5 +1,4 @@
-# Binaries and build output
-/bin/
+# Binaries — all builds go to bin/ via Makefile
 bin/
 dist/
 *.exe
@@ -13,6 +12,7 @@ dist/
 coverage.out
 coverage.html
 *.coverprofile
+coverage/
 
 # Go workspace
 go.work
@@ -47,3 +47,13 @@ debug.test
 
 # Cursor / local tooling
 .cursor/
+
+# GoReleaser
+/dist/
+
+# RAG knowledge base data (populated by ocp-rag-ingest)
+rag-data/
+.ingest_meta.json
+
+# Claude Code
+CLAUDE.md

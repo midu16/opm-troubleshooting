@@ -1,8 +1,42 @@
 {
   "name": "opm-troubleshooting",
   "description": "OLM catalog bundle inspection and operator troubleshooting toolkit with pure Go implementation",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": {
     "name": "github.com/midu16"
-  }
+  },
+  "capabilities": [
+    "bundle-inspection",
+    "channel-resolution",
+    "batch-validation",
+    "divergent-ideation",
+    "automated-troubleshooting"
+  ],
+  "attribution": {
+    "adhd-framework": {
+      "name": "ADHD-Agent",
+      "url": "https://github.com/UditAkhourii/adhd",
+      "license": "MIT",
+      "description": "Divergent ideation framework adapted with OLM-specific cognitive frames and tool integration"
+    }
+  },
+  "commands": [
+    {
+      "name": "inspect-bundle",
+      "path": "commands/inspect-bundle.md"
+    },
+    {
+      "name": "resolve-channel",
+      "path": "commands/resolve-channel.md"
+    },
+    {
+      "name": "batch-validate",
+      "path": "commands/batch-validate.md"
+    },
+    {
+      "name": "adhd",
+      "path": "commands/adhd.md",
+      "description": "Divergent ideation for OLM troubleshooting using parallel cognitive frames"
+    }
+  ]
 }
