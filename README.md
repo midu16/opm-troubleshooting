@@ -529,14 +529,16 @@ opm-troubleshooting/
 ├── opencode.json                # OpenCode project config
 ├── agents/
 │   └── AGENTS.md                # AI agent workflows
-├── bin/
-│   ├── catalog-bundle-inspect   # Go binary
+├── bin/                         # All binaries built here (make build)
+│   ├── catalog-bundle-inspect   # OLM catalog bundle inspector
 │   ├── batch-validate           # Batch validation
-│   └── telco-diagnose           # Telco production diagnosis
+│   ├── telco-diagnose           # Telco production diagnosis
+│   └── opm-diagnose             # Unified OPM diagnostics
 ├── cmd/
 │   ├── catalog-bundle-inspect/  # CLI entrypoint
 │   ├── batch-validate/          # Batch validation tool
-│   └── telco-diagnose/          # Telco diagnosis tool
+│   ├── telco-diagnose/          # Telco diagnosis tool
+│   └── opm-diagnose/            # Unified diagnostics tool
 ├── internal/
 │   ├── catalog/                 # FBC rendering and resolution
 │   ├── imageinspect/            # Bundle image inspection

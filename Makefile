@@ -32,11 +32,14 @@ GO_LDFLAGS := -X main.Version=$(VERSION) \
 TEST_TIMEOUT := 10m
 INTEGRATION_TEST_TIMEOUT := 20m
 
-# Binaries to build (only those with existing source code)
+# Binaries to build
 BINARIES := catalog-bundle-inspect \
             batch-validate \
             telco-diagnose \
             opm-diagnose
+
+# Ensure all binaries output to $(BIN_DIR)/
+export BIN_DIR
 
 # Tools
 GOLANGCI_LINT := $(shell go env GOPATH)/bin/golangci-lint
@@ -128,27 +131,6 @@ telco-diagnose: ## Build telco-diagnose binary
 .PHONY: opm-diagnose
 opm-diagnose: ## Build opm-diagnose unified diagnostic binary
 	@echo "$(COLOR_BLUE)Building opm-diagnose...$(COLOR_RESET)"
-	@mkdir -p $(BIN_DIR)
-	@go build $(GO_BUILD_FLAGS) -ldflags "$(GO_LDFLAGS)" -o $(BIN_DIR)/$@ ./cmd/$@
-	@echo "$(COLOR_GREEN)✓ Built $(BIN_DIR)/$@$(COLOR_RESET)"
-
-.PHONY: dump-labels
-dump-labels: ## Build dump-labels binary
-	@echo "$(COLOR_BLUE)Building dump-labels...$(COLOR_RESET)"
-	@mkdir -p $(BIN_DIR)
-	@go build $(GO_BUILD_FLAGS) -ldflags "$(GO_LDFLAGS)" -o $(BIN_DIR)/$@ ./cmd/$@
-	@echo "$(COLOR_GREEN)✓ Built $(BIN_DIR)/$@$(COLOR_RESET)"
-
-.PHONY: probe
-probe: ## Build probe binary
-	@echo "$(COLOR_BLUE)Building probe...$(COLOR_RESET)"
-	@mkdir -p $(BIN_DIR)
-	@go build $(GO_BUILD_FLAGS) -ldflags "$(GO_LDFLAGS)" -o $(BIN_DIR)/$@ ./cmd/$@
-	@echo "$(COLOR_GREEN)✓ Built $(BIN_DIR)/$@$(COLOR_RESET)"
-
-.PHONY: probe-partial
-probe-partial: ## Build probe-partial binary
-	@echo "$(COLOR_BLUE)Building probe-partial...$(COLOR_RESET)"
 	@mkdir -p $(BIN_DIR)
 	@go build $(GO_BUILD_FLAGS) -ldflags "$(GO_LDFLAGS)" -o $(BIN_DIR)/$@ ./cmd/$@
 	@echo "$(COLOR_GREEN)✓ Built $(BIN_DIR)/$@$(COLOR_RESET)"
@@ -335,4 +317,4 @@ check-env: ## Check development environment
         test-verbose test-must-gather lint fmt vet coverage coverage-view dev \
         mod-tidy mod-download mod-verify deps ci ci-quick clean clean-all \
         version list-binaries check-env \
-        catalog-bundle-inspect batch-validate telco-diagnose opm-diagnose dump-labels probe probe-partial
+        catalog-bundle-inspect batch-validate telco-diagnose opm-diagnose

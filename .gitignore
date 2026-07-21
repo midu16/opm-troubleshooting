@@ -1,5 +1,4 @@
-# Binaries and build output
-/bin/
+# Binaries — all builds go to bin/ via Makefile
 bin/
 dist/
 *.exe
@@ -13,9 +12,7 @@ dist/
 coverage.out
 coverage.html
 *.coverprofile
-catalog-bundle-inspect
-opm-diagnose
-telco-diagnose
+coverage/
 
 # Go workspace
 go.work
@@ -51,5 +48,8 @@ debug.test
 # Cursor / local tooling
 .cursor/
 
-# 
+# GoReleaser
+/dist/
+
+# Claude Code
 CLAUDE.md
