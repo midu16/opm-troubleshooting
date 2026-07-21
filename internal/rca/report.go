@@ -50,14 +50,19 @@ type ReportInput struct {
 
 // RepoCorrelationData is a report-layer view of OpenShift repo correlation results.
 type RepoCorrelationData struct {
-	Operator       string
-	RepoPath       string
-	RepoURL        string
-	Classification ClassificationData
-	GitHubIssues   []GitHubIssueData
-	RecentCommits  []CommitData
-	Evidence       []string
-	Recommendation string
+	Operator        string
+	RepoPath        string
+	RepoURL         string
+	Classification  ClassificationData
+	GitHubIssues    []GitHubIssueData
+	RecentCommits   []CommitData
+	Evidence        []string
+	Recommendation  string
+	BundleCommit    string
+	RepoSource      string
+	RepoVerified    bool
+	CommitPinned    bool
+	ConfidenceGrade string
 }
 
 // ClassificationData holds issue classification details for the report.
@@ -130,7 +135,7 @@ func GenerateDocument(input ReportInput) Document {
 	writeNoiseAnalysis(&b, input)
 	writeRootCause(&b, input)
 	writeADHDAnalysis(&b, input)
-	writeClassification(&b, input)
+	writeSourceCodeCorrelation(&b, input)
 	writeSimilarIssues(&b, input)
 	writeLearningInsights(&b, input)
 	writeCodeEvidence(&b, input)
@@ -559,19 +564,70 @@ func writeSessionContext(b *strings.Builder, input ReportInput) {
 	}
 }
 
-func writeClassification(b *strings.Builder, input ReportInput) {
+func writeSourceCodeCorrelation(b *strings.Builder, input ReportInput) {
 	if input.RepoCorrelation == nil {
 		return
 	}
 	rc := input.RepoCorrelation
 
-	b.WriteString("## Configuration vs Code Classification\n\n")
-	b.WriteString(fmt.Sprintf("**Operator:** %s\n", rc.Operator))
-	b.WriteString(fmt.Sprintf("**Source repo:** [%s](%s)\n", rc.RepoPath, rc.RepoURL))
-	b.WriteString(fmt.Sprintf("**Classification:** **%s** (confidence: %.0f%%)\n\n", rc.Classification.Type, rc.Classification.Confidence*100))
+	b.WriteString("## Source Code Correlation\n\n")
+
+	// Repository Provenance
+	b.WriteString("### Repository Provenance\n\n")
+	b.WriteString("| Field | Value |\n|-------|-------|\n")
+	b.WriteString(fmt.Sprintf("| **Repository** | [%s](%s) |\n", rc.RepoPath, rc.RepoURL))
+
+	sourceLabel := rc.RepoSource
+	switch rc.RepoSource {
+	case "static_registry":
+		sourceLabel = "Static registry (known operator mapping)"
+	case "bundle_labels":
+		sourceLabel = "Bundle image labels"
+	case "bundle_csv":
+		sourceLabel = "Bundle CSV annotations"
+	case "inferred":
+		sourceLabel = "Inferred from package name"
+	}
+	b.WriteString(fmt.Sprintf("| **Discovery Method** | %s |\n", sourceLabel))
+
+	verifiedLabel := "No"
+	if rc.RepoVerified {
+		verifiedLabel = "Yes"
+	}
+	b.WriteString(fmt.Sprintf("| **GitHub Verified** | %s |\n", verifiedLabel))
+
+	if rc.ConfidenceGrade != "" {
+		b.WriteString(fmt.Sprintf("| **Confidence Grade** | **%s** (%.0f%%) |\n",
+			rc.ConfidenceGrade, rc.Classification.Confidence*100))
+	}
+	b.WriteString("\n")
+
+	// Commit-Pinned Analysis
+	b.WriteString("### Commit Analysis\n\n")
+	if rc.CommitPinned && rc.BundleCommit != "" {
+		commitShort := rc.BundleCommit
+		if len(commitShort) > 12 {
+			commitShort = commitShort[:12]
+		}
+		b.WriteString(fmt.Sprintf("Analysis pinned to deployed commit `%s`. ", commitShort))
+		b.WriteString("This ensures code correlation reflects the exact version running in the cluster, not the latest upstream changes.\n\n")
+	} else if rc.BundleCommit != "" {
+		commitShort := rc.BundleCommit
+		if len(commitShort) > 12 {
+			commitShort = commitShort[:12]
+		}
+		b.WriteString(fmt.Sprintf("Deployed commit: `%s` (analysis performed at HEAD — commit-pinned analysis was unavailable).\n\n", commitShort))
+	} else {
+		b.WriteString("No deployed commit hash available. Analysis performed at repository HEAD.\n\n")
+	}
+
+	// Classification
+	b.WriteString("### Configuration vs Code Classification\n\n")
+	b.WriteString(fmt.Sprintf("**Classification:** **%s** (confidence: %.0f%%)\n\n",
+		rc.Classification.Type, rc.Classification.Confidence*100))
 
 	if len(rc.Classification.Evidence) > 0 {
-		b.WriteString("Evidence:\n")
+		b.WriteString("**Evidence chain:**\n")
 		for _, e := range rc.Classification.Evidence {
 			b.WriteString(fmt.Sprintf("- %s\n", e))
 		}
@@ -582,6 +638,27 @@ func writeClassification(b *strings.Builder, input ReportInput) {
 		b.WriteString(fmt.Sprintf("**Recommendation:** %s\n\n", rc.Recommendation))
 	}
 
+	// ADHD Critical Thinking Integration
+	if input.ADHDResult != nil {
+		for _, branch := range input.ADHDResult.Branches {
+			if branch.FrameID == "source-code-forensics" && len(branch.Hypotheses) > 0 {
+				b.WriteString("### Source Code Forensics (ADHD Frame)\n\n")
+				for i, h := range branch.Hypotheses {
+					if i >= 3 {
+						break
+					}
+					b.WriteString(fmt.Sprintf("- **%s** (score: %.2f)\n", truncate(h.Text, 80), h.Score.Total))
+					if h.Rationale != "" {
+						b.WriteString(fmt.Sprintf("  - %s\n", truncate(h.Rationale, 120)))
+					}
+				}
+				b.WriteString("\n")
+				break
+			}
+		}
+	}
+
+	// GitHub Issues
 	if len(rc.GitHubIssues) > 0 {
 		b.WriteString("### Related GitHub Issues\n\n")
 		b.WriteString("| # | Title | State | Updated |\n")
@@ -597,13 +674,18 @@ func writeClassification(b *strings.Builder, input ReportInput) {
 		b.WriteString("\n")
 	}
 
+	// Recent Commits
 	if len(rc.RecentCommits) > 0 {
 		b.WriteString("### Recent Upstream Changes\n\n")
 		for i, c := range rc.RecentCommits {
 			if i >= 10 {
 				break
 			}
-			b.WriteString(fmt.Sprintf("- `%s` %s (%s)\n", c.Hash[:8], c.Subject, c.Author))
+			hashLen := len(c.Hash)
+			if hashLen > 8 {
+				hashLen = 8
+			}
+			b.WriteString(fmt.Sprintf("- `%s` %s (%s)\n", c.Hash[:hashLen], c.Subject, c.Author))
 		}
 		b.WriteString("\n")
 	}

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/midu16/opm-troubleshooting/internal/codeanalysis"
+	"github.com/midu16/opm-troubleshooting/internal/gitdelta"
 	"github.com/midu16/opm-troubleshooting/internal/healthcheck"
 )
 
@@ -121,6 +122,100 @@ func TestClassifyCodeBugWithConfigOverlap(t *testing.T) {
 	}
 	if !foundOverlapEvidence {
 		t.Error("expected overlap evidence note, not found in Evidence slice")
+	}
+}
+
+func TestClassifyEnhanced_CodeDelta(t *testing.T) {
+	matches := []codeanalysis.Match{
+		{
+			FilePath:    "pkg/controller/reconcile.go",
+			LineNumber:  42,
+			LineContent: `return fmt.Errorf("failed to reconcile resource")`,
+			Pattern:     "failed to reconcile",
+		},
+	}
+	delta := &gitdelta.CommitDelta{
+		FilesChanged: []string{
+			"pkg/controller/reconcile.go",
+			"internal/operator/handler.go",
+			"cmd/manager/main.go",
+		},
+		Additions: 50,
+		Deletions: 10,
+	}
+
+	result := ClassifyEnhanced(matches, "failed to reconcile resource", nil, delta, "abc123", true)
+
+	if result.Type != ClassCodeBug {
+		t.Errorf("Type = %q, want %q", result.Type, ClassCodeBug)
+	}
+	if result.Confidence <= 0.8 {
+		t.Errorf("Confidence = %f, want > 0.8 with code delta + pinned commit", result.Confidence)
+	}
+}
+
+func TestClassifyEnhanced_ConfigDelta(t *testing.T) {
+	delta := &gitdelta.CommitDelta{
+		FilesChanged: []string{
+			"config/rbac/role.yaml",
+			"manifests/crd.yaml",
+			"deploy/operator.yaml",
+		},
+		DiffSummary: "Update RBAC permissions for new CRD",
+	}
+
+	result := ClassifyEnhanced(nil, "RBAC forbidden: user cannot list pods", nil, delta, "", false)
+
+	if result.Type != ClassConfiguration {
+		t.Errorf("Type = %q, want %q", result.Type, ClassConfiguration)
+	}
+}
+
+func TestClassifyEnhanced_CommitPinned(t *testing.T) {
+	matches := []codeanalysis.Match{
+		{
+			FilePath:    "pkg/controller/reconcile.go",
+			LineNumber:  42,
+			LineContent: `return fmt.Errorf("resource error")`,
+			Pattern:     "resource error",
+		},
+	}
+
+	pinned := ClassifyEnhanced(matches, "resource error", nil, nil, "abc123", true)
+	unpinned := ClassifyEnhanced(matches, "resource error", nil, nil, "", false)
+
+	if pinned.Confidence <= unpinned.Confidence {
+		t.Errorf("Pinned confidence (%f) should be > unpinned (%f)", pinned.Confidence, unpinned.Confidence)
+	}
+}
+
+func TestClassifyEnhanced_NilDelta(t *testing.T) {
+	result := ClassifyEnhanced(nil, "RBAC forbidden: user cannot list pods", nil, nil, "", false)
+
+	if result.Type != ClassConfiguration {
+		t.Errorf("Type = %q, want %q", result.Type, ClassConfiguration)
+	}
+	if result.Confidence <= 0 {
+		t.Error("expected non-zero confidence")
+	}
+}
+
+func TestClassifyFileChanges(t *testing.T) {
+	files := []string{
+		"pkg/controller/reconcile.go",
+		"internal/operator/handler.go",
+		"config/rbac/role.yaml",
+		"manifests/crd.yaml",
+		"README.md",
+	}
+
+	codeFiles, configFiles := classifyFileChanges(files)
+
+	if codeFiles != 2 {
+		t.Errorf("codeFiles = %d, want 2", codeFiles)
+	}
+	if configFiles != 2 {
+		t.Errorf("configFiles = %d, want 2", configFiles)
 	}
 }
 

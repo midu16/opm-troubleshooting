@@ -8,8 +8,8 @@ import (
 func TestAllFrames(t *testing.T) {
 	frames := AllFrames()
 
-	if got := len(frames); got != 12 {
-		t.Fatalf("AllFrames() returned %d frames, want 12", got)
+	if got := len(frames); got != 13 {
+		t.Fatalf("AllFrames() returned %d frames, want 13", got)
 	}
 
 	seen := make(map[string]bool, len(frames))
@@ -52,21 +52,21 @@ func TestSelectFrames(t *testing.T) {
 			name:      "count exceeds total returns all",
 			tags:      []string{"infrastructure"},
 			count:     20,
-			wantCount: 12,
+			wantCount: 13,
 			wantWild:  true,
 		},
 		{
 			name:      "zero count returns all",
 			tags:      []string{"infrastructure"},
 			count:     0,
-			wantCount: 12,
+			wantCount: 13,
 			wantWild:  true,
 		},
 		{
 			name:      "negative count returns all",
 			tags:      nil,
 			count:     -1,
-			wantCount: 12,
+			wantCount: 13,
 			wantWild:  true,
 		},
 		{

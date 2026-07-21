@@ -419,11 +419,23 @@ func analyzeSingleOperator(
 
 	// Step 9: OpenShift repo correlation
 	if cfg.EnableRepoCorrelation && op.FailureReason != "" {
-		correlationResult, err := openshift.Correlate(ctx, op.PackageName, op.FailureReason, openshift.CorrelateConfig{
+		corrCfg := openshift.CorrelateConfig{
 			CacheDir:    cfg.MetadataDir,
 			InfraReport: report.InfraReport,
 			SearchDays:  90,
-		})
+		}
+
+		if report.InstalledBundle != nil {
+			corrCfg.BundleInfo = report.InstalledBundle
+		} else if report.TargetBundle != nil {
+			corrCfg.BundleInfo = report.TargetBundle
+		}
+
+		if report.CommitDelta != nil {
+			corrCfg.CommitDelta = report.CommitDelta
+		}
+
+		correlationResult, err := openshift.Correlate(ctx, op.PackageName, op.FailureReason, corrCfg)
 		if err != nil {
 			report.Errors = append(report.Errors, fmt.Errorf("repo correlation: %w", err))
 		} else {
@@ -714,8 +726,13 @@ func convertCorrelation(c *openshift.Correlation) *rcamod.RepoCorrelationData {
 			Confidence: c.Classification.Confidence,
 			Evidence:   c.Classification.Evidence,
 		},
-		Evidence:       c.Evidence,
-		Recommendation: c.Recommendation,
+		Evidence:        c.Evidence,
+		Recommendation:  c.Recommendation,
+		BundleCommit:    c.BundleCommit,
+		RepoSource:      c.RepoSource,
+		RepoVerified:    c.RepoVerified,
+		CommitPinned:    c.CommitPinned,
+		ConfidenceGrade: c.ConfidenceGrade,
 	}
 	for _, issue := range c.GitHubIssues {
 		result.GitHubIssues = append(result.GitHubIssues, rcamod.GitHubIssueData{
