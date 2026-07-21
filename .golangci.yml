@@ -12,13 +12,55 @@ linters:
     - ineffassign
     - staticcheck
     - unused
+    - bodyclose
+    - gosec
+    - misspell
+    - revive
+    - unconvert
+    - unparam
+    - prealloc
+    - noctx
+    - exportloopref
+    - gocritic
+    - whitespace
 
 linters-settings:
   goimports:
     local-prefixes: github.com/midu16/opm-troubleshooting
+  gosec:
+    excludes:
+      - G101
+      - G304
+  revive:
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: exported
+      - name: increment-decrement
+      - name: var-naming
+      - name: package-comments
+        disabled: true
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+    disabled-checks:
+      - hugeParam
+      - rangeValCopy
 
 issues:
   exclude-rules:
     - path: _test\.go
       linters:
         - errcheck
+        - gosec
+        - unparam
+        - bodyclose
+    - path: cmd/
+      linters:
+        - unparam
+  max-issues-per-linter: 50
+  max-same-issues: 5

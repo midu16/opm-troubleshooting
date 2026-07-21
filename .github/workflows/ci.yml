@@ -29,11 +29,21 @@ jobs:
       - name: Build
         run: make build
 
-      - name: Unit tests
-        run: make test
+      - name: Unit tests with coverage
+        run: |
+          mkdir -p coverage
+          go test -tags containers_image_openpgp -race -covermode=atomic \
+            -coverprofile=coverage/coverage.out ./internal/...
 
       - name: Functional tests
         run: make test-functional
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage/coverage.out
+          flags: unittests
+          fail_ci_if_error: false
 
       - name: Lint
         run: make lint
@@ -63,29 +73,31 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Build ${{ matrix.suffix }}
+      - name: Build all binaries to bin/
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
+        run: make build
+
+      - name: Stage artifacts
         run: |
           mkdir -p dist
-          go build -tags containers_image_openpgp \
-            -ldflags "-s -w" \
-            -o dist/catalog-bundle-inspect-${{ matrix.suffix }} \
-            ./cmd/catalog-bundle-inspect
-          chmod +x dist/catalog-bundle-inspect-${{ matrix.suffix }}
+          for bin in bin/*; do
+            name=$(basename "$bin")
+            cp "$bin" "dist/${name}-${{ matrix.suffix }}"
+          done
 
       - name: Generate checksums
         run: |
           cd dist
-          sha256sum catalog-bundle-inspect-${{ matrix.suffix }} > catalog-bundle-inspect-${{ matrix.suffix }}.sha256
+          for f in *; do
+            sha256sum "$f" > "${f}.sha256"
+          done
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: catalog-bundle-inspect-${{ matrix.suffix }}
-          path: |
-            dist/catalog-bundle-inspect-${{ matrix.suffix }}
-            dist/catalog-bundle-inspect-${{ matrix.suffix }}.sha256
+          name: binaries-${{ matrix.suffix }}
+          path: dist/
           retention-days: 30

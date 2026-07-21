@@ -1,0 +1,74 @@
+version: 2
+
+project_name: opm-troubleshooting
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: catalog-bundle-inspect
+    main: ./cmd/catalog-bundle-inspect
+    binary: catalog-bundle-inspect
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+      - "386"
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+    tags:
+      - containers_image_openpgp
+
+  - id: telco-diagnose
+    main: ./cmd/telco-diagnose
+    binary: telco-diagnose
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+      - "386"
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+    tags:
+      - containers_image_openpgp
+
+archives:
+  - id: default
+    format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+      - Merge pull request
+      - Merge branch
+
+release:
+  github:
+    owner: midu16
+    name: opm-troubleshooting
+  draft: false
+  prerelease: auto
+  name_template: "v{{.Version}}"
