@@ -3,7 +3,7 @@ module github.com/midu16/opm-troubleshooting
 go 1.26.3
 
 require (
-	github.com/google/go-containerregistry v0.21.1
+	github.com/google/go-containerregistry v0.21.5
 	github.com/lack/mcmaker v0.0.7
 	github.com/mark3labs/mcp-go v0.56.0
 	github.com/mattn/go-sqlite3 v1.14.45
@@ -30,7 +30,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/containerd/cgroups/v3 v3.1.2 // indirect
-	github.com/containerd/containerd v1.7.32 // indirect
+	github.com/containerd/containerd v1.7.33 // indirect
 	github.com/containerd/containerd/api v1.10.0 // indirect
 	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
@@ -59,8 +59,8 @@ require (
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
-	github.com/go-git/go-billy/v5 v5.7.0 // indirect
-	github.com/go-git/go-git/v5 v5.16.4 // indirect
+	github.com/go-git/go-billy/v5 v5.9.0 // indirect
+	github.com/go-git/go-git/v5 v5.19.1 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -88,7 +88,7 @@ require (
 	github.com/google/jsonschema-go v0.4.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.28.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
 	github.com/h2non/filetype v1.1.3 // indirect
 	github.com/h2non/go-is-svg v0.0.0-20160927212452-35e8c4b0612c // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -129,8 +129,8 @@ require (
 	github.com/prometheus/procfs v0.20.1 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.11.0 // indirect
-	github.com/sigstore/fulcio v1.8.5 // indirect
-	github.com/sigstore/protobuf-specs v0.5.0 // indirect
+	github.com/sigstore/fulcio v1.8.6 // indirect
+	github.com/sigstore/protobuf-specs v0.5.1 // indirect
 	github.com/sigstore/sigstore v1.10.6 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/smallstep/pkcs7 v0.2.1 // indirect
@@ -159,19 +159,19 @@ require (
 	go.podman.io/common v0.68.0 // indirect
 	go.podman.io/image/v5 v5.40.0 // indirect
 	go.podman.io/storage v1.63.0 // indirect
-	go.yaml.in/yaml/v2 v2.4.3 // indirect
+	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.51.0 // indirect
-	golang.org/x/exp v0.0.0-20260112195511-716be5621a96 // indirect
+	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
 	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sys v0.46.0 // indirect
 	golang.org/x/term v0.43.0 // indirect
-	golang.org/x/text v0.38.0 // indirect
-	golang.org/x/time v0.14.0 // indirect
-	google.golang.org/genproto v0.0.0-20260202165425-ce8ad4cf556b // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260401024825-9d38bb4040a9 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260401024825-9d38bb4040a9 // indirect
+	golang.org/x/text v0.39.0 // indirect
+	golang.org/x/time v0.15.0 // indirect
+	google.golang.org/genproto v0.0.0-20260319201613-d00831a3d3e7 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260414002931-afd174a4e478 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260511170946-3700d4141b60 // indirect
 	google.golang.org/grpc v1.81.1 // indirect
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
