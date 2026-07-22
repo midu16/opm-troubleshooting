@@ -12,6 +12,7 @@ The `opm-troubleshooting` plugin provides AI-powered commands for diagnosing OLM
 - 🔧 **Channel Resolution**: Discover available channels and upgrade paths
 - 🤖 **AI Agents**: Automated troubleshooting workflows with intelligent diagnosis
 - 🚀 **Pure Go**: No external dependencies on `opm`, `jq`, or `skopeo` binaries
+- 📚 **RAG Knowledge Base**: Retrieval-augmented generation for operator documentation, code, and issue search via MCP server
 
 ## Architecture
 
@@ -87,9 +88,10 @@ sha256sum -c catalog-bundle-inspect.tar.gz.sha256
 
 ### Prerequisites
 
-1. **Claude Code CLI** installed (v0.1.0+)
-2. **Network access** to pull OCI images (catalog indexes and bundles)
-3. **Registry credentials** (for private catalogs): Set `DOCKER_CONFIG` environment variable
+1. **Go 1.26.3+** required for building from source
+2. **Claude Code CLI** installed (v0.1.0+)
+3. **Network access** to pull OCI images (catalog indexes and bundles)
+4. **Registry credentials** (for private catalogs): Set `DOCKER_CONFIG` environment variable
 
 ### Add Plugin Marketplace
 
@@ -307,6 +309,25 @@ telco-diagnose --must-gather <path> [options]
 
 **See**: [commands/telco-diagnose.md](commands/telco-diagnose.md)
 
+### RAG Knowledge Base
+
+The project includes a retrieval-augmented generation (RAG) system for operator troubleshooting knowledge. Three binaries support the RAG workflow:
+
+- **`ocp-rag-server`**: MCP server exposing RAG search to Claude Desktop/Cursor
+- **`ocp-rag-ingest`**: CLI for ingesting documentation, code, and issues into the knowledge base
+- **`ocp-rag-query`**: CLI for querying the knowledge base directly
+
+```bash
+# Ingest operator documentation
+./bin/ocp-rag-ingest --config rag-config.yaml
+
+# Query the knowledge base
+./bin/ocp-rag-query --config rag-config.yaml --collection docs "OADP backup failure"
+
+# Start the MCP server for Claude Desktop/Cursor
+./bin/ocp-rag-server --config rag-config.yaml
+```
+
 ## AI Agents
 
 The plugin includes specialized AI agents for automated troubleshooting workflows. See [agents/AGENTS.md](agents/AGENTS.md) for details.
@@ -389,9 +410,12 @@ export REGISTRY_AUTH_FILE=/path/to/auth.json
 
 ### Build Dependencies
 
-The plugin uses a pure Go build tag to avoid the `gpgme` C library dependency:
+Requires **Go 1.26.3+**. The plugin uses a pure Go build tag to avoid the `gpgme` C library dependency:
 
 ```bash
+# Ensure dependencies are up to date
+go mod tidy
+
 # Build uses containers_image_openpgp tag (no gpgme needed)
 make build
 ```
@@ -468,11 +492,13 @@ export DOCKER_CONFIG=/path/to/docker-config
 The plugin is built on the existing Go codebase in this repository:
 
 ```bash
-# Build the CLI binary
+# Build all binaries
 make build
 
-# Binary location
-bin/catalog-bundle-inspect
+# Binary locations
+ls bin/
+# catalog-bundle-inspect  batch-validate  telco-diagnose
+# opm-diagnose  ocp-rag-server  ocp-rag-ingest  ocp-rag-query
 
 # Run tests
 make test
@@ -533,16 +559,34 @@ opm-troubleshooting/
 │   ├── catalog-bundle-inspect   # OLM catalog bundle inspector
 │   ├── batch-validate           # Batch validation
 │   ├── telco-diagnose           # Telco production diagnosis
-│   └── opm-diagnose             # Unified OPM diagnostics
+│   ├── opm-diagnose             # Unified OPM diagnostics
+│   ├── ocp-rag-server           # RAG MCP server
+│   ├── ocp-rag-ingest           # RAG ingestion CLI
+│   └── ocp-rag-query            # RAG query CLI
 ├── cmd/
 │   ├── catalog-bundle-inspect/  # CLI entrypoint
 │   ├── batch-validate/          # Batch validation tool
 │   ├── telco-diagnose/          # Telco diagnosis tool
-│   └── opm-diagnose/            # Unified diagnostics tool
+│   ├── opm-diagnose/            # Unified diagnostics tool
+│   ├── ocp-rag-server/          # RAG MCP server entrypoint
+│   ├── ocp-rag-ingest/          # RAG ingestion entrypoint
+│   └── ocp-rag-query/           # RAG query entrypoint
 ├── internal/
 │   ├── catalog/                 # FBC rendering and resolution
 │   ├── imageinspect/            # Bundle image inspection
 │   ├── bundlecsv/               # CSV parsing
+│   ├── rag/                     # RAG engine, embeddings, and MCP server
+│   ├── claudeapi/               # Claude API client
+│   ├── codeanalysis/            # Source code analysis
+│   ├── datasource/              # Data source abstraction
+│   ├── healthcheck/             # Cluster health checks
+│   ├── livecluster/             # Live cluster interaction
+│   ├── metadata/                # Metadata storage
+│   ├── mustgather/              # must-gather analysis
+│   ├── noise/                   # Noise filtering
+│   ├── rca/                     # Root cause analysis
+│   ├── session/                 # Session management
+│   ├── telco/                   # Telco operator definitions
 │   └── workflow/                # End-to-end pipeline
 └── README.md                    # This file
 ```
@@ -685,6 +729,19 @@ grep PARTIAL validation-report.txt
 
 Apache 2.0 (inherits from repository license)
 
+### Known Vulnerabilities
+
+The project has transitive dependency vulnerabilities with no upstream fix available (as of July 2026):
+
+| Vulnerability | Module | Status |
+|---------------|--------|--------|
+| GO-2026-5932 | `golang.org/x/crypto` (openpgp) | No fix — unmaintained upstream |
+| GO-2025-3575 | `github.com/containerd/containerd` | No fix — CRI stream server |
+| GO-2025-3545 | `go.podman.io/image/v5` | No fix — signature verification |
+| GO-2026-5064 | `github.com/containerd/containerd` | No fix — CDI annotation smuggling |
+
+These are pulled in transitively via `operator-registry` and `containers/image`. The `x/crypto/openpgp` vulnerability is expected when building with the `containers_image_openpgp` tag. Run `govulncheck -tags containers_image_openpgp ./...` to check for updates.
+
 ## References
 
 - [Operator Lifecycle Manager Documentation](https://olm.operatorframework.io/)
@@ -703,6 +760,6 @@ For issues or feature requests:
 
 ---
 
-**Version**: 1.1.0  
+**Version**: 1.2.0  
 **Author**: github.com/openshift-eng  
 **Plugin Type**: Operator Troubleshooting & Catalog Inspection
