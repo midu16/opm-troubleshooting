@@ -5,7 +5,7 @@ go 1.26.3
 require (
 	github.com/google/go-containerregistry v0.21.5
 	github.com/mark3labs/mcp-go v0.56.0
-	github.com/mattn/go-sqlite3 v1.14.45
+	github.com/mattn/go-sqlite3 v1.14.48
 	github.com/operator-framework/operator-registry v1.72.0
 	github.com/philippgille/chromem-go v0.7.0
 	golang.org/x/sync v0.21.0
