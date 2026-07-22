@@ -24,10 +24,18 @@ type EmbeddingConfig struct {
 	Model string `json:"model"`
 }
 
+type VersionEntry struct {
+	Version        string `json:"version"`
+	DocsBranch     string `json:"docs_branch"`
+	OperatorBranch string `json:"operator_branch"`
+	TelcoBranch    string `json:"telco_branch"`
+}
+
 type OpenShiftConfig struct {
-	Version     string   `json:"version"`
-	DocsBaseURL string   `json:"docs_base_url"`
-	Repos       []string `json:"repos"`
+	Version     string         `json:"version"`
+	DocsBaseURL string         `json:"docs_base_url"` // Deprecated: docs are cloned from GitHub. Kept for config backward compatibility.
+	Repos       []string       `json:"repos"`
+	Versions    []VersionEntry `json:"versions"`
 }
 
 type RetrievalConfig struct {
@@ -179,3 +187,28 @@ func (c *Config) ReposDir() string   { return filepath.Join(c.DataDir, "repos") 
 func (c *Config) DocsDir() string    { return filepath.Join(c.DataDir, "docs") }
 func (c *Config) ChromemDir() string { return filepath.Join(c.DataDir, "chromem") }
 func (c *Config) TelcoDir() string   { return filepath.Join(c.DataDir, "telco-reference") }
+
+func synthesizeVersionEntry(version string) VersionEntry {
+	return VersionEntry{
+		Version:        version,
+		DocsBranch:     "enterprise-" + version,
+		OperatorBranch: "release-" + version,
+		TelcoBranch:    "release-" + version,
+	}
+}
+
+func (c *Config) ActiveVersionEntry() VersionEntry {
+	for _, ve := range c.OpenShift.Versions {
+		if ve.Version == c.OpenShift.Version {
+			return ve
+		}
+	}
+	return synthesizeVersionEntry(c.OpenShift.Version)
+}
+
+func (c *Config) AllVersionEntries() []VersionEntry {
+	if len(c.OpenShift.Versions) > 0 {
+		return c.OpenShift.Versions
+	}
+	return []VersionEntry{synthesizeVersionEntry(c.OpenShift.Version)}
+}

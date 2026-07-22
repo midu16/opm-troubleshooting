@@ -19,11 +19,7 @@ func (e *Engine) hybridRetrieve(ctx context.Context, coll Collection, query stri
 
 	seen := make(map[string]bool, len(docs))
 	for _, d := range docs {
-		prefix := d.Content
-		if len(prefix) > 100 {
-			prefix = prefix[:100]
-		}
-		seen[prefix] = true
+		seen[d.ID] = true
 	}
 
 	supplementMax := e.config.Retrieval.KeywordSupplementMax
@@ -42,14 +38,10 @@ func (e *Engine) hybridRetrieve(ctx context.Context, coll Collection, query stri
 			if added >= supplementMax {
 				break
 			}
-			prefix := d.Content
-			if len(prefix) > 100 {
-				prefix = prefix[:100]
-			}
-			if seen[prefix] {
+			if seen[d.ID] {
 				continue
 			}
-			seen[prefix] = true
+			seen[d.ID] = true
 			docs = append(docs, d)
 			added++
 		}

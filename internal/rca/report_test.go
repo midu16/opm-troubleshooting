@@ -203,6 +203,92 @@ func TestGenerateDocumentWithInfraReport(t *testing.T) {
 	}
 }
 
+func TestGenerateDocumentDeepAnalysis(t *testing.T) {
+	doc := GenerateDocument(ReportInput{
+		ClusterName:    "lab-cluster-01",
+		Environment:    noise.EnvLab,
+		MustGatherPath: "/tmp/mg",
+		Operator:       "odf-dependencies",
+		Namespace:      "openshift-storage",
+		OperatorState: mustgather.OperatorState{
+			PackageName:   "odf-dependencies",
+			Namespace:     "openshift-storage",
+			Channel:       "stable-4.18",
+			State:         "",
+			Faulty:        true,
+			FailureReason: "OLM resolution failed",
+		},
+		HealthReport: &healthcheck.Report{
+			TotalDimensions: 20,
+			Passed:          11,
+			Failed:          1,
+			Warnings:        1,
+			Skipped:         7,
+			Dimensions: []healthcheck.DimensionResult{
+				{ID: healthcheck.DimSubscription, Name: "Subscription State", Category: "OLM", Status: healthcheck.StatusFail, Severity: healthcheck.SeverityCritical, Summary: "OLM resolution failed", Evidence: []string{"constraints not satisfiable: no operators found in package odf-dependencies"}, Recommendation: "Verify package exists in catalog and dependency subscriptions resolve"},
+				{ID: healthcheck.DimCSVPhase, Name: "ClusterServiceVersion Phase", Category: "OLM", Status: healthcheck.StatusWarn, Summary: "No installed CSV found"},
+			},
+		},
+		InfraReport: &healthcheck.Report{
+			TotalDimensions: 13,
+			Passed:          12,
+			Failed:          1,
+			Dimensions: []healthcheck.DimensionResult{
+				{ID: healthcheck.DimClusterVersion, Name: "Cluster Version Status", Category: "Infrastructure", Status: healthcheck.StatusPass, Severity: healthcheck.SeverityHealthy, Summary: "Cluster version 4.18.22 (channel: stable-4.18)"},
+				{ID: healthcheck.DimNodeHealth, Name: "Node Health", Category: "Infrastructure", Status: healthcheck.StatusFail, Severity: healthcheck.SeverityCritical, Summary: "1/6 nodes NotReady", Evidence: []string{"worker-3 NotReady"}},
+			},
+		},
+		NoiseReport: &noise.FilterReport{
+			Environment:   noise.EnvLab,
+			TotalFindings: 2,
+			RealIssues:    2,
+		},
+		RAGContext: &RAGContextData{
+			Summary:    "Analysis of odf-dependencies identified a configuration issue",
+			Confidence: 0.46,
+			SymptomAnalysis: []RAGSymptomEvidence{
+				{Symptom: "OLM resolution failed", DimensionID: "catalog_subscription", Relevance: 0.53,
+					DocMatches: []RAGDocRef{{Title: "OLM Troubleshooting", Source: "openshift-docs/operators/olm-troubleshooting.adoc", Excerpt: "When OLM cannot resolve operator dependencies, check the CatalogSource and ensure the package exists."}},
+				},
+			},
+			IssueClassification:    "configuration",
+			ClassificationEvidence: []string{"2 OLM-layer failures detected", "Subscription channel: stable-4.18"},
+			RemediationSteps: []RAGRemediationStep{
+				{Step: 1, Priority: "High", Action: "Verify CatalogSource contains odf-dependencies package", Source: "olm-troubleshooting.adoc", Confidence: 0.53},
+			},
+		},
+	})
+
+	sections := []string{
+		"## Executive Summary",
+		"## Environment",
+		"## Observed Behavior",
+		"### Failure Chain Analysis",
+		"### Root Cause Determination",
+		"### Impact Assessment",
+		"### Suggested Fix",
+		"## Recommended Actions",
+	}
+	for _, section := range sections {
+		if !strings.Contains(doc.Markdown, section) {
+			t.Errorf("missing section: %s", section)
+		}
+	}
+
+	if !strings.Contains(doc.Markdown, "4.18.22") {
+		t.Error("missing OCP version in report")
+	}
+	if !strings.Contains(doc.Markdown, "CONFIGURATION") {
+		t.Error("missing classification verdict")
+	}
+	if !strings.Contains(doc.Markdown, "constraints not satisfiable") {
+		t.Error("missing evidence in report")
+	}
+	if !strings.Contains(doc.Markdown, "configuration") {
+		t.Error("missing classification in executive summary")
+	}
+}
+
 func TestGenerateDocumentNoADHD(t *testing.T) {
 	doc := GenerateDocument(ReportInput{
 		Operator: "compliance-operator",

@@ -24,6 +24,12 @@ type TroubleshootResult struct {
 	KnownIssues       []KnownIssue   `json:"known_issues"`
 	ConfigAdvice      []ConfigAdvice `json:"config_advice"`
 	Confidence        float64        `json:"confidence"`
+
+	SymptomAnalysis        []SymptomEvidence  `json:"symptom_analysis,omitempty"`
+	IssueClassification    string             `json:"issue_classification,omitempty"`
+	ClassificationEvidence []string           `json:"classification_evidence,omitempty"`
+	RemediationSteps       []RemediationStep  `json:"remediation_steps,omitempty"`
+	RelevantCodePaths      []CodePathEvidence `json:"relevant_code_paths,omitempty"`
 }
 
 type DocReference struct {
@@ -49,6 +55,83 @@ type ConfigAdvice struct {
 type SearchResult struct {
 	Documents []DocReference `json:"documents"`
 	Query     string         `json:"query"`
+}
+
+// DeepTroubleshootInput carries rich symptom data for multi-phase deep analysis.
+type DeepTroubleshootInput struct {
+	Operator          string
+	Namespace         string
+	OCPVersion        string
+	FailedDimensions  []DimensionSymptom
+	UnhealthyPods     []PodSymptom
+	UnavailableDeploy []DeploymentSymptom
+	WarningEvents     []EventSymptom
+	FailureReason     string
+	CurrentCSV        string
+	InstalledCSV      string
+	Channel           string
+	SubscriptionState string
+	InfraFailures     []DimensionSymptom
+}
+
+type DimensionSymptom struct {
+	DimensionID string
+	Name        string
+	Category    string
+	Status      string
+	Summary     string
+	Evidence    []string
+}
+
+type PodSymptom struct {
+	Name             string
+	Phase            string
+	WaitingReason    string
+	WaitingMessage   string
+	TerminatedReason string
+	RestartCount     int32
+}
+
+type DeploymentSymptom struct {
+	Name           string
+	Replicas       int32
+	ReadyReplicas  int32
+	ProgressingMsg string
+	UnavailableMsg string
+}
+
+type EventSymptom struct {
+	Object  string
+	Reason  string
+	Message string
+}
+
+type SymptomEvidence struct {
+	Symptom       string         `json:"symptom"`
+	DimensionID   string         `json:"dimension_id"`
+	Query         string         `json:"query"`
+	DocMatches    []DocReference `json:"doc_matches,omitempty"`
+	CodeMatches   []DocReference `json:"code_matches,omitempty"`
+	ConfigMatches []ConfigAdvice `json:"config_matches,omitempty"`
+	KnownIssues   []KnownIssue   `json:"known_issues,omitempty"`
+	Relevance     float64        `json:"relevance"`
+}
+
+type RemediationStep struct {
+	Step       int     `json:"step"`
+	Priority   string  `json:"priority"`
+	Action     string  `json:"action"`
+	Source     string  `json:"source"`
+	Confidence float64 `json:"confidence"`
+}
+
+type CodePathEvidence struct {
+	Declaration string `json:"declaration"`
+	FilePath    string `json:"file_path"`
+	Repo        string `json:"repo"`
+	RepoURL     string `json:"repo_url"`
+	Excerpt     string `json:"excerpt"`
+	Relevance   string `json:"relevance"`
 }
 
 type FreshnessStatus struct {

@@ -55,6 +55,7 @@ type AnalysisConfig struct {
 // FaultReport contains complete analysis for a single faulty operator.
 type FaultReport struct {
 	Operator         mustgather.OperatorState
+	Workloads        *mustgather.WorkloadState
 	TelcoProfile     *telco.Profile
 	InstalledBundle  *imageinspect.BundleInfo
 	TargetBundle     *imageinspect.BundleInfo

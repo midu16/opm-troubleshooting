@@ -23,7 +23,7 @@ var sourceDirs = []string{
 // ChunkGoSource walks the relevant subdirectories of repoDir, parses each
 // .go file with go/parser, and emits one Document per top-level declaration
 // (function, type, const, var) together with its doc comments.
-func ChunkGoSource(repoDir, repoName string) ([]rag.Document, error) {
+func ChunkGoSource(repoDir, repoName, version string, secretCfg *rag.SecretConfig) ([]rag.Document, error) {
 	var docs []rag.Document
 
 	for _, sub := range sourceDirs {
@@ -55,7 +55,11 @@ func ChunkGoSource(repoDir, repoName string) ([]rag.Document, error) {
 				return nil
 			}
 
-			fileDocs, parseErr := parseGoFile(path, repoDir, repoName)
+			if ShouldSkipFile(path, secretCfg) {
+				return nil
+			}
+
+			fileDocs, parseErr := parseGoFile(path, repoDir, repoName, version)
 			if parseErr != nil {
 				// Log warning but continue.
 				fmt.Fprintf(os.Stderr, "  warning: parse %s: %v\n", path, parseErr)
@@ -73,7 +77,7 @@ func ChunkGoSource(repoDir, repoName string) ([]rag.Document, error) {
 
 // parseGoFile parses a single Go source file and extracts top-level
 // declarations as individual documents.
-func parseGoFile(path, repoDir, repoName string) ([]rag.Document, error) {
+func parseGoFile(path, repoDir, repoName, version string) ([]rag.Document, error) {
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 	if err != nil {
@@ -147,6 +151,7 @@ func parseGoFile(path, repoDir, repoName string) ([]rag.Document, error) {
 				"declaration": declSummary,
 				"repo":        repoName,
 				"repo_url":    repoURL,
+				"ocp_version": version,
 			},
 		})
 	}

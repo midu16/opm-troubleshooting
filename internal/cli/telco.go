@@ -28,6 +28,9 @@ type telcoConfig struct {
 	stateDir       string
 	skipRCA        bool
 	skipHealth     bool
+	ragEnabled     bool
+	ragConfigPath  string
+	ragDataDir     string
 }
 
 // RunTelcoDiagnose executes the dedicated telco production diagnosis workflow.
@@ -59,6 +62,9 @@ func RunTelcoDiagnose(args []string) error {
 		rcaFile:        cfg.rcaFile,
 		clusterName:    cfg.clusterName,
 		stateDir:       cfg.stateDir,
+		ragEnabled:     cfg.ragEnabled,
+		ragConfigPath:  cfg.ragConfigPath,
+		ragDataDir:     cfg.ragDataDir,
 	}
 
 	return runMustGatherAnalysis(ctx, mgCfg)
@@ -87,6 +93,9 @@ func parseTelcoArgs(args []string) (*telcoConfig, error) {
 		stateDir        string
 		skipRCA         bool
 		skipHealth      bool
+		ragEnabled      bool
+		ragConfigPath   string
+		ragDataDir      string
 	)
 
 	fs.StringVar(&mustGatherFlag, "must-gather", "", "Path or glob to must-gather directory (required)")
@@ -104,6 +113,9 @@ func parseTelcoArgs(args []string) (*telcoConfig, error) {
 	fs.BoolVar(&jsonOut, "json", false, "Output JSON")
 	fs.BoolVar(&skipRCA, "no-rca", false, "Skip RCA markdown generation")
 	fs.BoolVar(&skipHealth, "no-health-check", false, "Skip 20-dimension health checks")
+	fs.BoolVar(&ragEnabled, "ocp-rag", false, "Enable OCP RAG knowledge base enrichment for root cause analysis")
+	fs.StringVar(&ragConfigPath, "rag-config", "", "RAG config file (default: rag-config.yaml)")
+	fs.StringVar(&ragDataDir, "rag-data", "", "RAG data directory (default: rag-data)")
 	fs.DurationVar(&timeoutDuration, "timeout", defaultTimeout, "Overall timeout")
 
 	if err := fs.Parse(args); err != nil {
@@ -134,6 +146,9 @@ func parseTelcoArgs(args []string) (*telcoConfig, error) {
 		stateDir:       stateDir,
 		skipRCA:        skipRCA,
 		skipHealth:     skipHealth,
+		ragEnabled:     ragEnabled,
+		ragConfigPath:  ragConfigPath,
+		ragDataDir:     ragDataDir,
 	}, nil
 }
 
@@ -172,12 +187,16 @@ Optional:
       --state-dir string     Session store directory
       --no-rca               Skip RCA report generation
       --no-health-check      Skip 20-dimension health checks
+      --ocp-rag              Enable OCP RAG knowledge base enrichment
+      --rag-config string    RAG config file (default: rag-config.yaml)
+      --rag-data string      RAG data directory (default: rag-data)
       --json                 JSON output
       --timeout duration     Timeout (default 10m)
 
 Environment:
   DOCKER_CONFIG              Registry credentials for catalog/bundle pulls
   ANTHROPIC_API_KEY          Optional: AI code-change correlation
+  OCP_RAG_EMBEDDING_URL      Ollama API URL for RAG embeddings
 
 Examples:
   # Full telco suite on lab cluster

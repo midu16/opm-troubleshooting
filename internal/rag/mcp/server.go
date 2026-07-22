@@ -104,13 +104,13 @@ func (s *mcpServer) registerTools() {
 	)
 }
 
-func (s *mcpServer) handleSearchDocs(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *mcpServer) handleSearchDocs(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	query := req.GetString("query", "")
 	if query == "" {
 		return errResult("query is required"), nil
 	}
 
-	result, err := s.engine.SearchDocs(context.Background(), query)
+	result, err := s.engine.SearchDocs(ctx, query)
 	if err != nil {
 		return errResult("search failed: " + err.Error()), nil
 	}
@@ -118,14 +118,14 @@ func (s *mcpServer) handleSearchDocs(_ context.Context, req mcp.CallToolRequest)
 	return textResult(formatSearchResult("OCP Documentation", result)), nil
 }
 
-func (s *mcpServer) handleSearchCode(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *mcpServer) handleSearchCode(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	query := req.GetString("query", "")
 	if query == "" {
 		return errResult("query is required"), nil
 	}
 	operator := req.GetString("operator", "")
 
-	result, err := s.engine.SearchCode(context.Background(), query, operator)
+	result, err := s.engine.SearchCode(ctx, query, operator)
 	if err != nil {
 		return errResult("search failed: " + err.Error()), nil
 	}
@@ -133,13 +133,13 @@ func (s *mcpServer) handleSearchCode(_ context.Context, req mcp.CallToolRequest)
 	return textResult(formatSearchResult("Operator Source Code", result)), nil
 }
 
-func (s *mcpServer) handleSearchTelco(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *mcpServer) handleSearchTelco(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	query := req.GetString("query", "")
 	if query == "" {
 		return errResult("query is required"), nil
 	}
 
-	result, err := s.engine.SearchTelcoConfigs(context.Background(), query)
+	result, err := s.engine.SearchTelcoConfigs(ctx, query)
 	if err != nil {
 		return errResult("search failed: " + err.Error()), nil
 	}
@@ -147,7 +147,7 @@ func (s *mcpServer) handleSearchTelco(_ context.Context, req mcp.CallToolRequest
 	return textResult(formatSearchResult("Telco Reference Configs", result)), nil
 }
 
-func (s *mcpServer) handleTroubleshoot(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *mcpServer) handleTroubleshoot(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	operator := req.GetString("operator", "")
 	if operator == "" {
 		return errResult("operator is required"), nil
@@ -155,7 +155,7 @@ func (s *mcpServer) handleTroubleshoot(_ context.Context, req mcp.CallToolReques
 	symptoms := req.GetStringSlice("symptoms", nil)
 	version := req.GetString("ocp_version", "")
 
-	result, err := s.engine.Troubleshoot(context.Background(), operator, symptoms, version)
+	result, err := s.engine.Troubleshoot(ctx, operator, symptoms, version)
 	if err != nil {
 		return errResult("troubleshoot failed: " + err.Error()), nil
 	}
@@ -203,13 +203,11 @@ func (s *mcpServer) handleTroubleshoot(_ context.Context, req mcp.CallToolReques
 	return textResult(sb.String()), nil
 }
 
-func (s *mcpServer) handleGetOperatorInfo(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *mcpServer) handleGetOperatorInfo(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	operator := req.GetString("operator", "")
 	if operator == "" {
 		return errResult("operator is required"), nil
 	}
-
-	ctx := context.Background()
 
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("# Operator Info: %s\n\n", operator))
@@ -244,14 +242,14 @@ func (s *mcpServer) handleGetOperatorInfo(_ context.Context, req mcp.CallToolReq
 	return textResult(sb.String()), nil
 }
 
-func (s *mcpServer) handleSearchKnownIssues(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *mcpServer) handleSearchKnownIssues(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	operator := req.GetString("operator", "")
 	if operator == "" {
 		return errResult("operator is required"), nil
 	}
 	version := req.GetString("ocp_version", "")
 
-	result, err := s.engine.SearchKnownIssues(context.Background(), operator, version)
+	result, err := s.engine.SearchKnownIssues(ctx, operator, version)
 	if err != nil {
 		return errResult("search failed: " + err.Error()), nil
 	}
@@ -259,13 +257,13 @@ func (s *mcpServer) handleSearchKnownIssues(_ context.Context, req mcp.CallToolR
 	return textResult(formatSearchResult("Known Issues", result)), nil
 }
 
-func (s *mcpServer) handleSearchErrata(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *mcpServer) handleSearchErrata(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	version := req.GetString("ocp_version", "")
 	if version == "" {
 		return errResult("ocp_version is required"), nil
 	}
 
-	result, err := s.engine.SearchKnownIssues(context.Background(), "", version)
+	result, err := s.engine.SearchKnownIssues(ctx, "", version)
 	if err != nil {
 		return errResult("search failed: " + err.Error()), nil
 	}
@@ -273,8 +271,7 @@ func (s *mcpServer) handleSearchErrata(_ context.Context, req mcp.CallToolReques
 	return textResult(formatSearchResult("Errata for OCP "+version, result)), nil
 }
 
-func (s *mcpServer) handleUpdateRAG(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	ctx := context.Background()
+func (s *mcpServer) handleUpdateRAG(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if err := ingest.RunIngestion(ctx, s.engine.Config(), s.engine.Store()); err != nil {
 		return errResult("ingestion failed: " + err.Error()), nil
 	}
@@ -282,7 +279,10 @@ func (s *mcpServer) handleUpdateRAG(_ context.Context, _ mcp.CallToolRequest) (*
 }
 
 func formatSearchResult(title string, sr *rag.SearchResult) string {
-	if sr == nil || len(sr.Documents) == 0 {
+	if sr == nil {
+		return fmt.Sprintf("No results found for %s", title)
+	}
+	if len(sr.Documents) == 0 {
 		return fmt.Sprintf("No results found for %s query: %s", title, sr.Query)
 	}
 

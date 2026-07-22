@@ -33,24 +33,27 @@ func RunIngestion(ctx context.Context, cfg *rag.Config, store *rag.Store) error 
 		}
 	}
 
+	// Resolve version entries for branch-aware operations.
+	ve := cfg.ActiveVersionEntry()
+
 	// Step 2: Clone/update all OpenShift repos concurrently.
-	fmt.Fprintf(os.Stderr, "\n[1/5] Cloning/updating %d OpenShift repos ...\n", len(cfg.OpenShift.Repos))
-	repoCommits, err := cloneAllRepos(ctx, cfg, reposDir)
+	fmt.Fprintf(os.Stderr, "\n[1/5] Cloning/updating %d OpenShift repos (branch: %s) ...\n", len(cfg.OpenShift.Repos), ve.OperatorBranch)
+	repoCommits, err := cloneAllRepos(ctx, cfg, reposDir, ve.OperatorBranch)
 	if err != nil {
 		return fmt.Errorf("clone repos: %w", err)
 	}
 
 	// Step 3: Load telco-reference configs.
-	fmt.Fprintf(os.Stderr, "\n[2/5] Loading telco-reference configs ...\n")
-	telcoDocs, err := LoadTelcoReference(ctx, cfg)
+	fmt.Fprintf(os.Stderr, "\n[2/5] Loading telco-reference configs (branch: %s) ...\n", ve.TelcoBranch)
+	telcoDocs, err := LoadTelcoReference(ctx, cfg, ve.TelcoBranch)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "  warning: telco-reference: %v\n", err)
 	}
 	fmt.Fprintf(os.Stderr, "  loaded %d telco documents\n", len(telcoDocs))
 
 	// Step 4: Scrape OCP docs.
-	fmt.Fprintf(os.Stderr, "\n[3/5] Scraping OCP %s docs ...\n", cfg.OpenShift.Version)
-	ocpDocs, err := ScrapeOCPDocs(ctx, cfg)
+	fmt.Fprintf(os.Stderr, "\n[3/5] Scraping OCP %s docs (branch: %s) ...\n", cfg.OpenShift.Version, ve.DocsBranch)
+	ocpDocs, err := ScrapeOCPDocs(ctx, cfg, ve.DocsBranch)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "  warning: OCP docs: %v\n", err)
 	}
@@ -67,7 +70,7 @@ func RunIngestion(ctx context.Context, cfg *rag.Config, store *rag.Store) error 
 			continue
 		}
 		fmt.Fprintf(os.Stderr, "  chunking Go source: %s ...\n", repo)
-		repoDocs, err := ChunkGoSource(repoDir, repo)
+		repoDocs, err := ChunkGoSource(repoDir, repo, ve.Version, &cfg.Secret)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "    warning: %v\n", err)
 			continue
@@ -152,7 +155,7 @@ func RunIngestion(ctx context.Context, cfg *rag.Config, store *rag.Store) error 
 // cloneAllRepos clones or updates all configured OpenShift repos concurrently,
 // limited to cfg.Ingestion.MaxParallelClones goroutines. Returns a map of
 // repo -> HEAD commit hash.
-func cloneAllRepos(ctx context.Context, cfg *rag.Config, reposDir string) (map[string]string, error) {
+func cloneAllRepos(ctx context.Context, cfg *rag.Config, reposDir, branch string) (map[string]string, error) {
 	commits := make(map[string]string)
 	mu := make(chan struct{}, 1) // protects commits map
 
@@ -182,11 +185,16 @@ func cloneAllRepos(ctx context.Context, cfg *rag.Config, reposDir string) (map[s
 				}
 			} else {
 				// Clone fresh.
-				fmt.Fprintf(os.Stderr, "  cloning %s ...\n", repo)
+				fmt.Fprintf(os.Stderr, "  cloning %s (branch: %s) ...\n", repo, branch)
 				cmdCtx, cancel := context.WithTimeout(gctx, timeout)
 				defer cancel()
 				url := "https://github.com/openshift/" + repo
-				cmd := exec.CommandContext(cmdCtx, "git", "clone", "--depth=1", url, repoDir)
+				cloneArgs := []string{"clone", "--depth=1"}
+				if branch != "" {
+					cloneArgs = append(cloneArgs, "--branch", branch)
+				}
+				cloneArgs = append(cloneArgs, url, repoDir)
+				cmd := exec.CommandContext(cmdCtx, "git", cloneArgs...)
 				cmd.Stderr = os.Stderr
 				if err := cmd.Run(); err != nil {
 					fmt.Fprintf(os.Stderr, "  warning: git clone %s: %v\n", repo, err)

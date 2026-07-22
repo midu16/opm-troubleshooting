@@ -112,7 +112,7 @@ func TestComputeConfidence(t *testing.T) {
 }
 
 func TestBuildTroubleshootQuery(t *testing.T) {
-	query := buildTroubleshootQuery("etcd", []string{"pod crashloop", "leader election failed"})
+	query := buildTroubleshootQuery("etcd", []string{"pod crashloop", "leader election failed"}, "4.22")
 	if query == "" {
 		t.Error("expected non-empty query")
 	}

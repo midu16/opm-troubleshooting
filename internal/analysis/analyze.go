@@ -293,6 +293,16 @@ func analyzeSingleOperator(
 		}
 	}
 
+	// Step 0.5: Parse workloads for deep analysis
+	ns := op.Namespace
+	if report.TelcoProfile != nil && report.TelcoProfile.DefaultNS != "" && ns == "" {
+		ns = report.TelcoProfile.DefaultNS
+	}
+	if ns != "" {
+		workloads, _ := mustgather.ParseWorkloads(cfg.MustGatherPath, ns)
+		report.Workloads = workloads
+	}
+
 	// Step 1: 20-dimension health check
 	if cfg.HealthCheck {
 		hcCfg := healthcheck.Config{
@@ -400,10 +410,15 @@ func analyzeSingleOperator(
 		}
 	}
 
-	// Step 5.5: RAG knowledge base enrichment
+	// Step 5.5: RAG knowledge base enrichment (deep analysis with fallback)
 	if ragEngine != nil {
-		ragSymptoms := buildRAGSymptoms(report)
-		ragResult, ragErr := ragEngine.Troubleshoot(ctx, op.PackageName, ragSymptoms, "")
+		deepInput := buildDeepTroubleshootInput(report, cfg)
+		ragResult, ragErr := ragEngine.DeepTroubleshoot(ctx, deepInput)
+		if ragErr != nil {
+			fmt.Fprintf(os.Stderr, "  Warning: deep RAG: %v, falling back to shallow\n", ragErr)
+			ragSymptoms := buildRAGSymptoms(report)
+			ragResult, ragErr = ragEngine.Troubleshoot(ctx, op.PackageName, ragSymptoms, "")
+		}
 		if ragErr != nil {
 			fmt.Fprintf(os.Stderr, "  Warning: RAG lookup: %v\n", ragErr)
 		} else {
@@ -733,6 +748,83 @@ func buildRAGSymptoms(report FaultReport) []string {
 	return symptoms
 }
 
+func buildDeepTroubleshootInput(report FaultReport, _ AnalysisConfig) rag.DeepTroubleshootInput {
+	input := rag.DeepTroubleshootInput{
+		Operator:          report.Operator.PackageName,
+		Namespace:         report.Operator.Namespace,
+		FailureReason:     report.Operator.FailureReason,
+		CurrentCSV:        report.Operator.CurrentCSV,
+		InstalledCSV:      report.Operator.InstalledCSV,
+		Channel:           report.Operator.Channel,
+		SubscriptionState: report.Operator.State,
+	}
+
+	if report.HealthReport != nil {
+		for _, dim := range report.HealthReport.Dimensions {
+			if dim.Status == healthcheck.StatusFail || dim.Status == healthcheck.StatusWarn {
+				input.FailedDimensions = append(input.FailedDimensions, rag.DimensionSymptom{
+					DimensionID: string(dim.ID),
+					Name:        dim.Name,
+					Category:    dim.Category,
+					Status:      string(dim.Status),
+					Summary:     dim.Summary,
+					Evidence:    dim.Evidence,
+				})
+			}
+		}
+	}
+
+	if report.InfraReport != nil {
+		for _, dim := range report.InfraReport.Dimensions {
+			if dim.Status == healthcheck.StatusFail || dim.Status == healthcheck.StatusWarn {
+				input.InfraFailures = append(input.InfraFailures, rag.DimensionSymptom{
+					DimensionID: string(dim.ID),
+					Name:        dim.Name,
+					Category:    dim.Category,
+					Status:      string(dim.Status),
+					Summary:     dim.Summary,
+					Evidence:    dim.Evidence,
+				})
+			}
+		}
+	}
+
+	if report.Workloads != nil {
+		for _, pod := range report.Workloads.Pods {
+			if pod.Phase != "Running" && pod.Phase != "Succeeded" || !pod.Ready || pod.WaitingReason != "" || pod.TerminatedReason != "" {
+				input.UnhealthyPods = append(input.UnhealthyPods, rag.PodSymptom{
+					Name:             pod.Name,
+					Phase:            pod.Phase,
+					WaitingReason:    pod.WaitingReason,
+					WaitingMessage:   pod.WaitingMessage,
+					TerminatedReason: pod.TerminatedReason,
+					RestartCount:     pod.RestartCount,
+				})
+			}
+		}
+		for _, dep := range report.Workloads.Deployments {
+			if !dep.Available || dep.UnavailableMsg != "" {
+				input.UnavailableDeploy = append(input.UnavailableDeploy, rag.DeploymentSymptom{
+					Name:           dep.Name,
+					Replicas:       dep.Replicas,
+					ReadyReplicas:  dep.ReadyReplicas,
+					ProgressingMsg: dep.ProgressingMsg,
+					UnavailableMsg: dep.UnavailableMsg,
+				})
+			}
+		}
+		for _, ev := range report.Workloads.Events {
+			input.WarningEvents = append(input.WarningEvents, rag.EventSymptom{
+				Object:  ev.Object,
+				Reason:  ev.Reason,
+				Message: ev.Message,
+			})
+		}
+	}
+
+	return input
+}
+
 func convertSimilarIssues(issues []learning.SimilarIssue) []rcamod.SimilarIssueData {
 	if len(issues) == 0 {
 		return nil
@@ -818,8 +910,10 @@ func convertRAGContext(r *rag.TroubleshootResult) *rcamod.RAGContextData {
 		return nil
 	}
 	result := &rcamod.RAGContextData{
-		Summary:    r.Summary,
-		Confidence: r.Confidence,
+		Summary:                r.Summary,
+		Confidence:             r.Confidence,
+		IssueClassification:    r.IssueClassification,
+		ClassificationEvidence: r.ClassificationEvidence,
 	}
 	for _, ref := range r.DocumentationRefs {
 		result.DocumentationRefs = append(result.DocumentationRefs, rcamod.RAGDocRef{
@@ -842,6 +936,46 @@ func convertRAGContext(r *rag.TroubleshootResult) *rcamod.RAGContextData {
 			Component: ca.Component,
 			Reference: ca.Reference,
 			Advice:    ca.Advice,
+		})
+	}
+	for _, se := range r.SymptomAnalysis {
+		rse := rcamod.RAGSymptomEvidence{
+			Symptom:     se.Symptom,
+			DimensionID: se.DimensionID,
+			Relevance:   se.Relevance,
+		}
+		for _, d := range se.DocMatches {
+			rse.DocMatches = append(rse.DocMatches, rcamod.RAGDocRef{
+				Title: d.Title, Source: d.Source, Excerpt: d.Excerpt, URL: d.URL,
+			})
+		}
+		for _, d := range se.CodeMatches {
+			rse.CodeMatches = append(rse.CodeMatches, rcamod.RAGDocRef{
+				Title: d.Title, Source: d.Source, Excerpt: d.Excerpt, URL: d.URL,
+			})
+		}
+		for _, ca := range se.ConfigMatches {
+			rse.ConfigMatches = append(rse.ConfigMatches, rcamod.RAGConfigAdvice{
+				Component: ca.Component, Reference: ca.Reference, Advice: ca.Advice,
+			})
+		}
+		for _, ki := range se.KnownIssues {
+			rse.KnownIssues = append(rse.KnownIssues, rcamod.RAGKnownIssue{
+				ID: ki.ID, Summary: ki.Summary, Workaround: ki.Workaround, FixVersion: ki.FixVersion,
+			})
+		}
+		result.SymptomAnalysis = append(result.SymptomAnalysis, rse)
+	}
+	for _, rs := range r.RemediationSteps {
+		result.RemediationSteps = append(result.RemediationSteps, rcamod.RAGRemediationStep{
+			Step: rs.Step, Priority: rs.Priority, Action: rs.Action,
+			Source: rs.Source, Confidence: rs.Confidence,
+		})
+	}
+	for _, cp := range r.RelevantCodePaths {
+		result.RelevantCodePaths = append(result.RelevantCodePaths, rcamod.RAGCodePathEvidence{
+			Declaration: cp.Declaration, FilePath: cp.FilePath, Repo: cp.Repo,
+			RepoURL: cp.RepoURL, Excerpt: cp.Excerpt, Relevance: cp.Relevance,
 		})
 	}
 	return result

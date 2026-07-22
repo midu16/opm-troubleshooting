@@ -61,10 +61,10 @@ var docTopics = []struct {
 // repository and processes AsciiDoc files from the topic directories.
 // This replaces the previous HTML scraper that fetched from docs.redhat.com,
 // which now returns 403 for automated requests.
-func ScrapeOCPDocs(ctx context.Context, cfg *rag.Config) ([]rag.Document, error) {
+func ScrapeOCPDocs(ctx context.Context, cfg *rag.Config, docsBranch string) ([]rag.Document, error) {
 	docsRepoDir := filepath.Join(cfg.DocsDir(), "openshift-docs")
 
-	if err := cloneOrUpdateDocsRepo(ctx, docsRepoDir, cfg.Ingestion.GitTimeout.Duration); err != nil {
+	if err := cloneOrUpdateDocsRepo(ctx, docsRepoDir, docsBranch); err != nil {
 		return nil, fmt.Errorf("openshift-docs repo: %w", err)
 	}
 
@@ -97,7 +97,7 @@ func ScrapeOCPDocs(ctx context.Context, cfg *rag.Config) ([]rag.Document, error)
 	return allDocs, nil
 }
 
-func cloneOrUpdateDocsRepo(ctx context.Context, repoDir string, _ interface{ Seconds() float64 }) error {
+func cloneOrUpdateDocsRepo(ctx context.Context, repoDir, branch string) error {
 	if _, err := os.Stat(filepath.Join(repoDir, ".git")); err == nil {
 		fmt.Fprintf(os.Stderr, "  openshift-docs: updating ...\n")
 		cmd := exec.CommandContext(ctx, "git", "pull", "--ff-only")
@@ -109,16 +109,14 @@ func cloneOrUpdateDocsRepo(ctx context.Context, repoDir string, _ interface{ Sec
 		return nil
 	}
 
-	fmt.Fprintf(os.Stderr, "  openshift-docs: cloning (depth=1, this may take a minute) ...\n")
+	fmt.Fprintf(os.Stderr, "  openshift-docs: cloning branch %s (depth=1, this may take a minute) ...\n", branch)
 
-	cmd := exec.CommandContext(ctx,
-		"git", "clone",
-		"--depth=1",
-		"--filter=blob:none",
-		"--no-checkout",
-		"https://github.com/openshift/openshift-docs",
-		repoDir,
-	)
+	cloneArgs := []string{"clone", "--depth=1", "--filter=blob:none", "--no-checkout"}
+	if branch != "" {
+		cloneArgs = append(cloneArgs, "--branch", branch)
+	}
+	cloneArgs = append(cloneArgs, "https://github.com/openshift/openshift-docs", repoDir)
+	cmd := exec.CommandContext(ctx, "git", cloneArgs...)
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("git clone: %w", err)

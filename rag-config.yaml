@@ -5,6 +5,15 @@ embedding:
 openshift:
   version: "4.22"
   docs_base_url: "https://docs.redhat.com/en/documentation/openshift_container_platform/4.22"
+  versions:
+    - version: "4.22"
+      docs_branch: "enterprise-4.22"
+      operator_branch: "release-4.22"
+      telco_branch: "release-4.22"
+    # - version: "4.17"
+    #   docs_branch: "enterprise-4.17"
+    #   operator_branch: "release-4.17"
+    #   telco_branch: "release-4.17"
   repos:
     - cluster-etcd-operator
     - cluster-kube-apiserver-operator

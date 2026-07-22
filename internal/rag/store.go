@@ -151,7 +151,7 @@ func (s *Store) KeywordSearch(ctx context.Context, coll Collection, keyword stri
 		"$contains": keyword,
 	})
 	if err != nil {
-		return nil, nil
+		return nil, fmt.Errorf("keyword query collection %s: %w", coll, err)
 	}
 
 	docs := make([]Document, 0, len(results))

@@ -10,18 +10,15 @@ import (
 	"github.com/midu16/opm-troubleshooting/internal/rag"
 )
 
-const (
-	telcoRepoURL    = "https://github.com/openshift-kni/telco-reference.git"
-	telcoRepoBranch = "release-4.22"
-)
+const telcoRepoURL = "https://github.com/openshift-kni/telco-reference.git"
 
 // LoadTelcoReference clones (or updates) the openshift-kni/telco-reference
-// repository at the release-4.22 branch and loads all YAML and Markdown
+// repository at the specified branch and loads all YAML and Markdown
 // files from the telco-core/ and telco-ran/ subdirectories.
-func LoadTelcoReference(ctx context.Context, cfg *rag.Config) ([]rag.Document, error) {
+func LoadTelcoReference(ctx context.Context, cfg *rag.Config, telcoBranch string) ([]rag.Document, error) {
 	telcoDir := cfg.TelcoDir()
 
-	if err := cloneOrUpdateTelco(ctx, cfg, telcoDir); err != nil {
+	if err := cloneOrUpdateTelco(ctx, cfg, telcoDir, telcoBranch); err != nil {
 		return nil, fmt.Errorf("clone/update telco-reference: %w", err)
 	}
 
@@ -70,7 +67,7 @@ func LoadTelcoReference(ctx context.Context, cfg *rag.Config) ([]rag.Document, e
 
 // cloneOrUpdateTelco clones the telco-reference repo if absent, or does
 // a fast-forward pull if already present.
-func cloneOrUpdateTelco(ctx context.Context, cfg *rag.Config, telcoDir string) error {
+func cloneOrUpdateTelco(ctx context.Context, cfg *rag.Config, telcoDir, telcoBranch string) error {
 	timeout := cfg.Ingestion.GitTimeout.Duration
 
 	if _, err := os.Stat(filepath.Join(telcoDir, ".git")); err == nil {
@@ -89,13 +86,13 @@ func cloneOrUpdateTelco(ctx context.Context, cfg *rag.Config, telcoDir string) e
 	}
 
 	// Clone fresh.
-	fmt.Fprintf(os.Stderr, "  telco-reference: cloning %s ...\n", telcoRepoBranch)
+	fmt.Fprintf(os.Stderr, "  telco-reference: cloning %s ...\n", telcoBranch)
 	if err := os.MkdirAll(filepath.Dir(telcoDir), 0o755); err != nil {
 		return err
 	}
 	cmdCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	cmd := exec.CommandContext(cmdCtx, "git", "clone", "--depth=1", "--branch", telcoRepoBranch, telcoRepoURL, telcoDir)
+	cmd := exec.CommandContext(cmdCtx, "git", "clone", "--depth=1", "--branch", telcoBranch, telcoRepoURL, telcoDir)
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

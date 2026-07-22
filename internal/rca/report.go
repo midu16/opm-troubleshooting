@@ -2,6 +2,7 @@ package rca
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -126,6 +127,12 @@ type RAGContextData struct {
 	KnownIssues       []RAGKnownIssue
 	ConfigAdvice      []RAGConfigAdvice
 	Confidence        float64
+
+	SymptomAnalysis        []RAGSymptomEvidence
+	IssueClassification    string
+	ClassificationEvidence []string
+	RemediationSteps       []RAGRemediationStep
+	RelevantCodePaths      []RAGCodePathEvidence
 }
 
 // RAGDocRef is a documentation reference from the RAG knowledge base.
@@ -151,6 +158,36 @@ type RAGConfigAdvice struct {
 	Advice    string
 }
 
+// RAGSymptomEvidence holds per-dimension RAG search results for the report.
+type RAGSymptomEvidence struct {
+	Symptom       string
+	DimensionID   string
+	DocMatches    []RAGDocRef
+	CodeMatches   []RAGDocRef
+	ConfigMatches []RAGConfigAdvice
+	KnownIssues   []RAGKnownIssue
+	Relevance     float64
+}
+
+// RAGRemediationStep is a prioritized remediation action from the RAG knowledge base.
+type RAGRemediationStep struct {
+	Step       int
+	Priority   string
+	Action     string
+	Source     string
+	Confidence float64
+}
+
+// RAGCodePathEvidence is an operator code path relevant to the failure.
+type RAGCodePathEvidence struct {
+	Declaration string
+	FilePath    string
+	Repo        string
+	RepoURL     string
+	Excerpt     string
+	Relevance   string
+}
+
 // GenerateDocument produces a professional Markdown RCA from analysis results.
 func GenerateDocument(input ReportInput) Document {
 	now := time.Now().UTC()
@@ -163,16 +200,21 @@ func GenerateDocument(input ReportInput) Document {
 
 	writeHeader(&b, title, now, input)
 	writeExecutiveSummary(&b, input)
+	writeEnvironment(&b, input)
+	writeObservedBehavior(&b, input)
 	writeHealthDimensions(&b, input)
 	writeInfraHealthDimensions(&b, input)
 	writeNoiseAnalysis(&b, input)
 	writeRootCause(&b, input)
+	if input.RAGContext != nil && len(input.RAGContext.SymptomAnalysis) > 0 {
+		writeDeepAnalysis(&b, input)
+	} else {
+		writeRAGContext(&b, input)
+	}
 	writeADHDAnalysis(&b, input)
 	writeSourceCodeCorrelation(&b, input)
-	writeRAGContext(&b, input)
 	writeSimilarIssues(&b, input)
 	writeLearningInsights(&b, input)
-	writeCodeEvidence(&b, input)
 	writeRecommendations(&b, input)
 	writeSessionContext(&b, input)
 	writeAppendix(&b, input)
@@ -208,36 +250,169 @@ func writeHeader(b *strings.Builder, title string, now time.Time, input ReportIn
 func writeExecutiveSummary(b *strings.Builder, input ReportInput) {
 	b.WriteString("## Executive Summary\n\n")
 
+	summary := buildTechnicalSummary(input)
+	b.WriteString(summary)
+	b.WriteString("\n\n")
+
+	severity := determineSeverity(input)
 	realIssues := 0
 	cosmetic := 0
 	if input.NoiseReport != nil {
 		realIssues = input.NoiseReport.RealIssues
 		cosmetic = input.NoiseReport.CosmeticAlerts
 	}
+	if realIssues > 0 || cosmetic > 0 {
+		b.WriteString(fmt.Sprintf("**Severity:** %s", severity))
+		if realIssues > 0 {
+			b.WriteString(fmt.Sprintf(" — %d real issue(s) identified", realIssues))
+		}
+		if cosmetic > 0 {
+			b.WriteString(fmt.Sprintf(", %d cosmetic alert(s) filtered for `%s` environment", cosmetic, input.Environment))
+		}
+		b.WriteString(".\n")
+	}
 
+	if input.RAGContext != nil && len(input.RAGContext.KnownIssues) > 0 {
+		b.WriteString(fmt.Sprintf("\nThis failure pattern matches **%d known issue(s)** in the knowledge base.\n", len(input.RAGContext.KnownIssues)))
+	}
+	b.WriteString("\n")
+}
+
+func writeEnvironment(b *strings.Builder, input ReportInput) {
+	b.WriteString("## Environment\n\n")
 	op := input.OperatorState
-	switch {
-	case op.Faulty:
-		b.WriteString(fmt.Sprintf(
-			"Operator **%s** is in a faulty state (`%s`). ",
-			op.PackageName, op.State,
-		))
-	case input.HealthReport != nil && input.HealthReport.Failed > 0:
-		b.WriteString(fmt.Sprintf(
-			"Operator **%s** subscription appears healthy but **%d** health dimension(s) failed. ",
-			op.PackageName, input.HealthReport.Failed,
-		))
-	default:
-		b.WriteString(fmt.Sprintf("Operator **%s** passed systematic health checks. ", op.PackageName))
+
+	version := extractClusterVersion(input)
+	if version != "" {
+		b.WriteString(fmt.Sprintf("- **OCP Version:** %s\n", version))
+	}
+	b.WriteString(fmt.Sprintf("- **Operator:** %s\n", input.Operator))
+	if input.Namespace != "" {
+		b.WriteString(fmt.Sprintf("- **Namespace:** %s\n", input.Namespace))
+	}
+	if op.Channel != "" {
+		b.WriteString(fmt.Sprintf("- **Channel:** `%s`\n", op.Channel))
+	}
+	if op.InstalledCSV != "" {
+		b.WriteString(fmt.Sprintf("- **Installed CSV:** `%s` (%s)\n", op.InstalledCSV, op.InstalledVersion))
+	}
+	if op.CurrentCSV != "" && op.CurrentCSV != op.InstalledCSV {
+		b.WriteString(fmt.Sprintf("- **Current CSV:** `%s`\n", op.CurrentCSV))
+	}
+	if op.State != "" {
+		b.WriteString(fmt.Sprintf("- **Subscription State:** `%s`\n", op.State))
+	}
+	if input.Environment != "" {
+		b.WriteString(fmt.Sprintf("- **Environment:** %s\n", input.Environment))
+	}
+	if input.MustGatherPath != "" {
+		b.WriteString(fmt.Sprintf("- **Data Source:** `%s`\n", input.MustGatherPath))
+	}
+	if input.InstalledBundle != nil {
+		b.WriteString(fmt.Sprintf("- **Bundle Image:** %s (commit: %s)\n", input.InstalledBundle.URL, input.InstalledBundle.Commit))
+	}
+	b.WriteString("\n")
+}
+
+func writeObservedBehavior(b *strings.Builder, input ReportInput) {
+	op := input.OperatorState
+
+	hasConditions := len(op.Conditions) > 0
+	hasWorkloadFailures := false
+	hasInfraFailures := false
+
+	if input.HealthReport != nil {
+		for _, dim := range input.HealthReport.Dimensions {
+			if dim.Category == "Workload" && (dim.Status == healthcheck.StatusFail || dim.Status == healthcheck.StatusWarn) {
+				hasWorkloadFailures = true
+				break
+			}
+		}
+	}
+	if input.InfraReport != nil && input.InfraReport.Failed > 0 {
+		hasInfraFailures = true
 	}
 
-	if realIssues > 0 {
-		b.WriteString(fmt.Sprintf("**%d real issue(s)** require action. ", realIssues))
+	if !hasConditions && !hasWorkloadFailures && !hasInfraFailures && !op.Faulty {
+		return
 	}
-	if cosmetic > 0 {
-		b.WriteString(fmt.Sprintf("**%d alert(s)** classified as cosmetic noise for `%s` environment. ", cosmetic, input.Environment))
+
+	b.WriteString("## Observed Behavior\n\n")
+
+	// OLM Lifecycle State
+	b.WriteString("### OLM Lifecycle State\n\n")
+	b.WriteString("```\n")
+	b.WriteString(fmt.Sprintf("Subscription: %s\n", op.PackageName))
+	stateDisplay := op.State
+	if stateDisplay == "" {
+		stateDisplay = "<none>"
 	}
-	b.WriteString("\n\n")
+	b.WriteString(fmt.Sprintf("State: %s\n", stateDisplay))
+	if op.Channel != "" {
+		b.WriteString(fmt.Sprintf("Channel: %s\n", op.Channel))
+	}
+	if op.InstalledCSV != "" {
+		b.WriteString(fmt.Sprintf("Installed CSV: %s\n", op.InstalledCSV))
+	} else if op.Faulty || (input.HealthReport != nil && input.HealthReport.Failed > 0) {
+		b.WriteString("Installed CSV: <none>\n")
+	}
+	if op.FailureReason != "" {
+		b.WriteString(fmt.Sprintf("Failure Reason: %s\n", op.FailureReason))
+	}
+	for _, cond := range op.Conditions {
+		if cond.Status == "True" {
+			b.WriteString(fmt.Sprintf("Condition: %s = %s\n", cond.Type, cond.Status))
+			if cond.Message != "" {
+				msg := cond.Message
+				if len(msg) > 300 {
+					msg = msg[:300] + "..."
+				}
+				b.WriteString(fmt.Sprintf("  Message: %s\n", msg))
+			}
+		}
+	}
+	b.WriteString("```\n\n")
+
+	// OLM dimension evidence
+	if input.HealthReport != nil {
+		for _, dim := range input.HealthReport.Dimensions {
+			if dim.Category == "OLM" && (dim.Status == healthcheck.StatusFail || dim.Status == healthcheck.StatusWarn) {
+				b.WriteString(fmt.Sprintf("**%s** [%s]: %s\n\n", dim.Name, dim.Status, dim.Summary))
+				if len(dim.Evidence) > 0 {
+					renderEvidenceBlock(b, dim.Evidence, 5)
+					b.WriteString("\n")
+				}
+			}
+		}
+	}
+
+	// Workload State
+	if hasWorkloadFailures {
+		b.WriteString("### Workload State\n\n")
+		for _, dim := range input.HealthReport.Dimensions {
+			if dim.Category == "Workload" && (dim.Status == healthcheck.StatusFail || dim.Status == healthcheck.StatusWarn) {
+				b.WriteString(fmt.Sprintf("**%s** [%s]: %s\n\n", dim.Name, dim.Status, dim.Summary))
+				if len(dim.Evidence) > 0 {
+					renderEvidenceBlock(b, dim.Evidence, 10)
+					b.WriteString("\n")
+				}
+			}
+		}
+	}
+
+	// Infrastructure State
+	if hasInfraFailures {
+		b.WriteString("### Infrastructure State\n\n")
+		for _, dim := range input.InfraReport.Dimensions {
+			if dim.Status == healthcheck.StatusFail || dim.Status == healthcheck.StatusWarn {
+				b.WriteString(fmt.Sprintf("**%s** [%s]: %s\n\n", dim.Name, dim.Status, dim.Summary))
+				if len(dim.Evidence) > 0 {
+					renderEvidenceBlock(b, dim.Evidence, 10)
+					b.WriteString("\n")
+				}
+			}
+		}
+	}
 }
 
 func writeHealthDimensions(b *strings.Builder, input ReportInput) {
@@ -258,6 +433,11 @@ func writeHealthDimensions(b *strings.Builder, input ReportInput) {
 			"| %d | %s | %s | %s | %s | %s |\n",
 			i+1, dim.Name, dim.Category, dim.Status, dim.Severity, truncate(dim.Summary, 80),
 		))
+		if (dim.Status == healthcheck.StatusFail || dim.Status == healthcheck.StatusWarn) && len(dim.Evidence) > 0 {
+			for _, e := range dim.Evidence {
+				b.WriteString(fmt.Sprintf("|  |  |  |  |  | --> %s |\n", truncate(e, 100)))
+			}
+		}
 	}
 	b.WriteString("\n")
 }
@@ -280,6 +460,11 @@ func writeInfraHealthDimensions(b *strings.Builder, input ReportInput) {
 			"| %d | %s | %s | %s | %s | %s |\n",
 			i+1, dim.Name, dim.Category, dim.Status, dim.Severity, truncate(dim.Summary, 80),
 		))
+		if (dim.Status == healthcheck.StatusFail || dim.Status == healthcheck.StatusWarn) && len(dim.Evidence) > 0 {
+			for _, e := range dim.Evidence {
+				b.WriteString(fmt.Sprintf("|  |  |  |  |  | --> %s |\n", truncate(e, 100)))
+			}
+		}
 	}
 	b.WriteString("\n")
 }
@@ -513,36 +698,25 @@ func writeRootCause(b *strings.Builder, input ReportInput) {
 	}
 }
 
-func writeCodeEvidence(b *strings.Builder, input ReportInput) {
-	if input.CodeAnalysis == nil || len(input.CodeAnalysis.Matches) == 0 {
-		return
-	}
-	ca := input.CodeAnalysis
-	b.WriteString("## Code-Level Evidence\n\n")
-	b.WriteString(fmt.Sprintf("%s\n\n", ca.Summary))
-	b.WriteString("| File | Line | Pattern | Content |\n")
-	b.WriteString("|------|------|---------|----------|\n")
-	for i, m := range ca.Matches {
-		if i >= 15 {
-			b.WriteString(fmt.Sprintf("| ... | | | (%d more matches) |\n", len(ca.Matches)-15))
-			break
-		}
-		b.WriteString(fmt.Sprintf(
-			"| `%s` | %d | %s | %s |\n",
-			m.FilePath, m.LineNumber, truncate(m.Pattern, 30), truncate(m.LineContent, 60),
-		))
-	}
-	b.WriteString("\n")
-}
-
 func writeRecommendations(b *strings.Builder, input ReportInput) {
 	b.WriteString("## Recommended Actions\n\n")
-	priority := 1
+	step := 1
 
-	if input.ClaudeAnalysis != nil {
-		for _, action := range input.ClaudeAnalysis.RecommendedActions {
-			b.WriteString(fmt.Sprintf("%d. %s\n", priority, action))
-			priority++
+	if input.HealthReport != nil {
+		for _, dim := range input.HealthReport.Dimensions {
+			if dim.Status == healthcheck.StatusFail && dim.Recommendation != "" {
+				b.WriteString(fmt.Sprintf("%d. **[%s]** %s\n", step, dim.Name, dim.Recommendation))
+				step++
+			}
+		}
+	}
+
+	if input.InfraReport != nil {
+		for _, dim := range input.InfraReport.Dimensions {
+			if dim.Status == healthcheck.StatusFail && dim.Recommendation != "" {
+				b.WriteString(fmt.Sprintf("%d. **[%s]** %s\n", step, dim.Name, dim.Recommendation))
+				step++
+			}
 		}
 	}
 
@@ -554,20 +728,18 @@ func writeRecommendations(b *strings.Builder, input ReportInput) {
 		case 2:
 			level = "High"
 		}
-		b.WriteString(fmt.Sprintf("%d. **[ %s ]** %s — %s\n", priority, level, rec.Title, rec.Description))
-		priority++
+		b.WriteString(fmt.Sprintf("%d. **[%s]** %s — %s\n", step, level, rec.Title, rec.Description))
+		step++
 	}
 
-	if input.HealthReport != nil {
-		for _, dim := range input.HealthReport.Dimensions {
-			if dim.Status == healthcheck.StatusFail && dim.Recommendation != "" {
-				b.WriteString(fmt.Sprintf("%d. **[%s]** %s\n", priority, dim.Name, dim.Recommendation))
-				priority++
-			}
+	if input.ClaudeAnalysis != nil {
+		for _, action := range input.ClaudeAnalysis.RecommendedActions {
+			b.WriteString(fmt.Sprintf("%d. %s\n", step, action))
+			step++
 		}
 	}
 
-	if priority == 1 {
+	if step == 1 {
 		b.WriteString("No immediate actions required. Continue monitoring.\n")
 	}
 	b.WriteString("\n")
@@ -771,6 +943,597 @@ func writeRAGContext(b *strings.Builder, input ReportInput) {
 			b.WriteString(fmt.Sprintf("- **%s** (%s): %s\n", ca.Component, ca.Reference, ca.Advice))
 		}
 		b.WriteString("\n")
+	}
+}
+
+func writeDeepAnalysis(b *strings.Builder, input ReportInput) {
+	ragCtx := input.RAGContext
+	classification := ragCtx.IssueClassification
+
+	b.WriteString("## Deep Analysis: Root Cause Determination\n\n")
+
+	// Section 1: Failure Chain Analysis
+	b.WriteString("### Failure Chain Analysis\n\n")
+	b.WriteString("The following analysis traces the causal chain from the initial symptom to the root cause, using evidence from the must-gather data correlated with OpenShift documentation and known issues.\n\n")
+
+	failedDims := failedDimensionsInCausalOrder(input)
+	symByDim := make(map[string]RAGSymptomEvidence)
+	for _, se := range ragCtx.SymptomAnalysis {
+		symByDim[se.DimensionID] = se
+	}
+
+	for i, dim := range failedDims {
+		statusTag := "FAIL"
+		if dim.Status == healthcheck.StatusWarn {
+			statusTag = "WARN"
+		}
+		b.WriteString(fmt.Sprintf("#### Step %d: %s [%s]\n\n", i+1, dim.Name, statusTag))
+
+		b.WriteString(fmt.Sprintf("The %s check reports: **%s**\n\n", dim.Name, dim.Summary))
+
+		if len(dim.Evidence) > 0 {
+			b.WriteString("**Evidence from must-gather:**\n\n")
+			renderEvidenceBlock(b, dim.Evidence, 8)
+			b.WriteString("\n")
+		}
+
+		if dim.Recommendation != "" {
+			b.WriteString(fmt.Sprintf("**Recommendation:** %s\n\n", dim.Recommendation))
+		}
+
+		if se, ok := symByDim[string(dim.ID)]; ok {
+			if len(se.DocMatches) > 0 && se.Relevance >= 0.4 {
+				best := se.DocMatches[0]
+				b.WriteString(fmt.Sprintf("**Supporting Documentation** (relevance: %.0f%%):\n", se.Relevance*100))
+				excerpt := best.Excerpt
+				if len(excerpt) > 400 {
+					excerpt = excerpt[:400] + "..."
+				}
+				excerpt = strings.ReplaceAll(excerpt, "\n", "\n> ")
+				b.WriteString(fmt.Sprintf("> **%s** — %s\n>\n> %s\n\n", best.Title, best.Source, excerpt))
+				if len(se.DocMatches) > 1 {
+					b.WriteString(fmt.Sprintf("*+%d additional documentation matches*\n\n", len(se.DocMatches)-1))
+				}
+			}
+
+			if len(se.CodeMatches) > 0 {
+				best := se.CodeMatches[0]
+				b.WriteString(fmt.Sprintf("**Relevant Code Path:** `%s` in `%s`\n\n", best.Title, best.Source))
+				if best.Excerpt != "" {
+					codeExcerpt := best.Excerpt
+					if len(codeExcerpt) > 300 {
+						codeExcerpt = codeExcerpt[:300] + "..."
+					}
+					b.WriteString("```go\n")
+					b.WriteString(codeExcerpt)
+					b.WriteString("\n```\n\n")
+				}
+			}
+
+			if len(se.KnownIssues) > 0 {
+				ki := se.KnownIssues[0]
+				b.WriteString(fmt.Sprintf("**Known Issue:** %s — %s\n", ki.ID, ki.Summary))
+				if ki.Workaround != "" {
+					b.WriteString(fmt.Sprintf("- **Workaround:** %s\n", ki.Workaround))
+				}
+				if ki.FixVersion != "" {
+					b.WriteString(fmt.Sprintf("- **Fixed in:** %s\n", ki.FixVersion))
+				}
+				b.WriteString("\n")
+			}
+		}
+
+		sig := dimensionSignificance(dim, classification)
+		b.WriteString(fmt.Sprintf("**Significance:** %s\n\n", sig))
+		b.WriteString("---\n\n")
+	}
+
+	// Section 2: Root Cause Determination
+	b.WriteString("### Root Cause Determination\n\n")
+	if classification != "" && classification != "unknown" {
+		b.WriteString(fmt.Sprintf("**Verdict:** This is a **%s** issue (RAG Confidence: %.0f%%).\n\n",
+			strings.ToUpper(classification), ragCtx.Confidence*100))
+	} else {
+		b.WriteString(fmt.Sprintf("**Verdict:** Root cause classification is **inconclusive** (RAG Confidence: %.0f%%). Additional evidence from operator code, known issues, and configuration references would improve determination.\n\n",
+			ragCtx.Confidence*100))
+	}
+
+	if len(ragCtx.ClassificationEvidence) > 0 {
+		b.WriteString("**Supporting evidence:**\n\n")
+		for i, e := range ragCtx.ClassificationEvidence {
+			b.WriteString(fmt.Sprintf("%d. %s\n", i+1, e))
+		}
+		b.WriteString("\n")
+	}
+
+	for _, p := range input.RCAPatterns {
+		b.WriteString(fmt.Sprintf("- **Pattern detected:** %s (confidence: %.0f%%) — %s\n",
+			p.Pattern, p.Confidence*100, p.Description))
+	}
+	if len(input.RCAPatterns) > 0 {
+		b.WriteString("\n")
+	}
+
+	// Core Issue synthesis
+	b.WriteString("**Core Issue:**\n\n")
+	coreIssue := buildCoreIssueSynthesis(input, failedDims, classification)
+	b.WriteString(coreIssue)
+	b.WriteString("\n\n")
+
+	// Section 3: Impact Assessment
+	writeImpactAssessment(b, input, failedDims)
+
+	// Section 4: Workaround and Remediation
+	writeWorkaroundRemediation(b, input)
+
+	// Section 5: References
+	writeDeepReferences(b, input)
+}
+
+func buildCoreIssueSynthesis(input ReportInput, failedDims []healthcheck.DimensionResult, classification string) string {
+	op := input.OperatorState
+	var parts []string
+
+	if len(failedDims) == 0 {
+		return fmt.Sprintf("The %s operator shows no critical failures. Monitor the warned dimensions for potential escalation.", op.PackageName)
+	}
+
+	primary := failedDims[0]
+	switch {
+	case classification == "configuration":
+		parts = append(parts, fmt.Sprintf("The %s operator failure is caused by a configuration issue.", op.PackageName))
+		if primary.ID == healthcheck.DimSubscription || primary.ID == healthcheck.DimCatalogSource {
+			parts = append(parts, fmt.Sprintf("The OLM subscription cannot resolve because %s.", primary.Summary))
+			if op.Channel != "" {
+				parts = append(parts, fmt.Sprintf("The operator is configured on channel `%s` — verify that the CatalogSource contains this package and that all dependency operators are available.", op.Channel))
+			}
+		} else {
+			parts = append(parts, fmt.Sprintf("The primary failure is in %s: %s.", primary.Name, primary.Summary))
+		}
+
+	case classification == "infrastructure":
+		parts = append(parts, fmt.Sprintf("The %s operator failure is caused by underlying infrastructure degradation.", op.PackageName))
+		for _, dim := range failedDims {
+			if dim.Category == "Infrastructure" {
+				parts = append(parts, fmt.Sprintf("Infrastructure issue: %s — %s.", dim.Name, dim.Summary))
+				break
+			}
+		}
+		parts = append(parts, "Resolve the infrastructure issue before investigating operator-level failures, as they may be symptoms of the underlying platform problem.")
+
+	case classification == "code":
+		parts = append(parts, fmt.Sprintf("The %s operator failure appears to be a code-level issue.", op.PackageName))
+		if len(input.RAGContext.KnownIssues) > 0 {
+			ki := input.RAGContext.KnownIssues[0]
+			parts = append(parts, fmt.Sprintf("This matches known issue %s: %s.", ki.ID, ki.Summary))
+		}
+
+	default:
+		parts = append(parts, fmt.Sprintf("The %s operator has %d failing health dimension(s).", op.PackageName, len(failedDims)))
+		parts = append(parts, fmt.Sprintf("The primary failure is in %s (%s): %s.", primary.Name, primary.Category, primary.Summary))
+		hasInfra := false
+		for _, dim := range failedDims {
+			if dim.Category == "Infrastructure" {
+				hasInfra = true
+				break
+			}
+		}
+		if hasInfra {
+			parts = append(parts, "Infrastructure failures are also present, which may be contributing to operator-level issues.")
+		}
+	}
+
+	return strings.Join(parts, " ")
+}
+
+func writeImpactAssessment(b *strings.Builder, input ReportInput, failedDims []healthcheck.DimensionResult) {
+	if len(failedDims) == 0 {
+		return
+	}
+
+	b.WriteString("### Impact Assessment\n\n")
+
+	hasInfraFailure := false
+	hasOLMFailure := false
+	hasWorkloadFailure := false
+	for _, dim := range failedDims {
+		switch dim.Category {
+		case "Infrastructure":
+			hasInfraFailure = true
+		case "OLM":
+			hasOLMFailure = true
+		case "Workload":
+			hasWorkloadFailure = true
+		}
+	}
+
+	switch {
+	case hasInfraFailure && (hasOLMFailure || hasWorkloadFailure):
+		b.WriteString("**Blast radius:** This issue has **mixed scope** — infrastructure degradation may be contributing to operator failures across multiple namespaces.\n\n")
+	case hasInfraFailure:
+		b.WriteString("**Blast radius:** This is a **cluster-wide** infrastructure issue that may affect multiple operators and workloads.\n\n")
+	default:
+		b.WriteString(fmt.Sprintf("**Blast radius:** This issue is **operator-scoped**, affecting only the `%s` deployment in namespace `%s`.\n\n",
+			input.Operator, input.Namespace))
+	}
+
+	b.WriteString("**Affected components:**\n\n")
+	for _, dim := range failedDims {
+		b.WriteString(fmt.Sprintf("- **%s** (%s): %s\n", dim.Name, dim.Category, dim.Summary))
+	}
+	b.WriteString("\n")
+
+	if input.InfraReport != nil {
+		var healthy []string
+		for _, dim := range input.InfraReport.Dimensions {
+			if dim.Status == healthcheck.StatusPass {
+				healthy = append(healthy, dim.Name)
+			}
+		}
+		if len(healthy) > 0 {
+			b.WriteString(fmt.Sprintf("**Healthy subsystems:** %s\n\n", strings.Join(healthy, ", ")))
+		}
+	}
+}
+
+func writeWorkaroundRemediation(b *strings.Builder, input ReportInput) {
+	ragCtx := input.RAGContext
+	hasWorkaround := false
+	hasFix := false
+
+	if ragCtx != nil {
+		for _, ki := range ragCtx.KnownIssues {
+			if ki.Workaround != "" {
+				hasWorkaround = true
+				break
+			}
+		}
+		for _, rs := range ragCtx.RemediationSteps {
+			if rs.Priority == "Critical" || rs.Priority == "High" {
+				hasFix = true
+				break
+			}
+		}
+	}
+
+	failedDims := failedDimensionsInCausalOrder(input)
+	for _, dim := range failedDims {
+		if dim.Recommendation != "" {
+			hasFix = true
+			break
+		}
+	}
+
+	if !hasWorkaround && !hasFix {
+		return
+	}
+
+	// Immediate Workaround
+	if hasWorkaround {
+		b.WriteString("### Immediate Workaround\n\n")
+		for _, ki := range ragCtx.KnownIssues {
+			if ki.Workaround == "" {
+				continue
+			}
+			b.WriteString(fmt.Sprintf("**Known Issue %s:** %s\n\n", ki.ID, ki.Summary))
+			b.WriteString("```\n")
+			b.WriteString(ki.Workaround)
+			b.WriteString("\n```\n\n")
+			if ki.FixVersion != "" {
+				b.WriteString(fmt.Sprintf("*Permanent fix available in version %s.*\n\n", ki.FixVersion))
+			}
+		}
+	}
+
+	// Suggested Fix
+	b.WriteString("### Suggested Fix\n\n")
+	step := 1
+
+	for _, dim := range failedDims {
+		if dim.Recommendation != "" {
+			b.WriteString(fmt.Sprintf("%d. **%s:** %s\n", step, dim.Name, dim.Recommendation))
+			step++
+		}
+	}
+
+	if ragCtx != nil {
+		for _, ca := range ragCtx.ConfigAdvice {
+			b.WriteString(fmt.Sprintf("%d. **Validate %s configuration:** %s (%s)\n", step, ca.Component, truncate(ca.Advice, 200), ca.Reference))
+			step++
+			if step > 8 {
+				break
+			}
+		}
+	}
+
+	if step == 1 {
+		b.WriteString("No specific fix guidance available. Review the failure chain analysis above and consult the referenced documentation.\n")
+	}
+	b.WriteString("\n")
+}
+
+func writeDeepReferences(b *strings.Builder, input ReportInput) {
+	ragCtx := input.RAGContext
+	hasSources := ragCtx != nil && len(ragCtx.RelevantCodePaths) > 0
+	hasDocs := ragCtx != nil && len(ragCtx.DocumentationRefs) > 0
+	hasIssues := ragCtx != nil && len(ragCtx.KnownIssues) > 0
+
+	if !hasSources && !hasDocs && !hasIssues {
+		return
+	}
+
+	b.WriteString("### References\n\n")
+
+	if hasSources {
+		b.WriteString("**Source Files:**\n\n")
+		for i, cp := range ragCtx.RelevantCodePaths {
+			if i >= 10 {
+				b.WriteString(fmt.Sprintf("- ... and %d more source files\n", len(ragCtx.RelevantCodePaths)-10))
+				break
+			}
+			if cp.Repo != "" {
+				b.WriteString(fmt.Sprintf("- `%s` — %s (%s)\n", cp.FilePath, cp.Declaration, cp.Repo))
+			} else {
+				b.WriteString(fmt.Sprintf("- `%s` — %s\n", cp.FilePath, cp.Declaration))
+			}
+		}
+		b.WriteString("\n")
+	}
+
+	if hasDocs {
+		b.WriteString("**Documentation:**\n\n")
+		for i, ref := range ragCtx.DocumentationRefs {
+			if i >= 10 {
+				b.WriteString(fmt.Sprintf("- ... and %d more references\n", len(ragCtx.DocumentationRefs)-10))
+				break
+			}
+			if ref.URL != "" {
+				b.WriteString(fmt.Sprintf("- [%s](%s) — %s\n", ref.Title, ref.URL, ref.Source))
+			} else {
+				b.WriteString(fmt.Sprintf("- %s (%s)\n", ref.Title, ref.Source))
+			}
+		}
+		b.WriteString("\n")
+	}
+
+	if hasIssues {
+		b.WriteString("**Known Issues:**\n\n")
+		for _, ki := range ragCtx.KnownIssues {
+			fix := ""
+			if ki.FixVersion != "" {
+				fix = fmt.Sprintf(" (fix: %s)", ki.FixVersion)
+			}
+			b.WriteString(fmt.Sprintf("- **%s:** %s%s\n", ki.ID, ki.Summary, fix))
+		}
+		b.WriteString("\n")
+	}
+}
+
+func extractClusterVersion(input ReportInput) string {
+	if input.InfraReport == nil {
+		return ""
+	}
+	for _, dim := range input.InfraReport.Dimensions {
+		if dim.ID == healthcheck.DimClusterVersion && dim.Status == healthcheck.StatusPass {
+			s := dim.Summary
+			if idx := strings.Index(s, "Cluster version "); idx >= 0 {
+				rest := s[idx+len("Cluster version "):]
+				if sp := strings.IndexAny(rest, " ("); sp > 0 {
+					return rest[:sp]
+				}
+				return rest
+			}
+		}
+	}
+	return ""
+}
+
+func failedDimensionsInCausalOrder(input ReportInput) []healthcheck.DimensionResult {
+	order := []healthcheck.DimensionID{
+		healthcheck.DimCatalogSource,
+		healthcheck.DimSubscription,
+		healthcheck.DimInstallPlan,
+		healthcheck.DimOperatorGroup,
+		healthcheck.DimCSVPhase,
+		healthcheck.DimCSVRequirements,
+		healthcheck.DimDeploymentReady,
+		healthcheck.DimPodHealth,
+		healthcheck.DimContainerRestarts,
+		healthcheck.DimImagePull,
+		healthcheck.DimScheduling,
+		healthcheck.DimWarningEvents,
+		healthcheck.DimCRDEstablished,
+		healthcheck.DimManagedClusters,
+		healthcheck.DimBackupRestore,
+	}
+	orderMap := make(map[healthcheck.DimensionID]int, len(order))
+	for i, id := range order {
+		orderMap[id] = i
+	}
+
+	var failed []healthcheck.DimensionResult
+	if input.HealthReport != nil {
+		for _, dim := range input.HealthReport.Dimensions {
+			if dim.Status == healthcheck.StatusFail || dim.Status == healthcheck.StatusWarn {
+				failed = append(failed, dim)
+			}
+		}
+	}
+	if input.InfraReport != nil {
+		for _, dim := range input.InfraReport.Dimensions {
+			if dim.Status == healthcheck.StatusFail || dim.Status == healthcheck.StatusWarn {
+				failed = append(failed, dim)
+			}
+		}
+	}
+
+	sort.Slice(failed, func(i, j int) bool {
+		oi, oki := orderMap[failed[i].ID]
+		oj, okj := orderMap[failed[j].ID]
+		if !oki {
+			oi = 100
+		}
+		if !okj {
+			oj = 100
+		}
+		if oi != oj {
+			return oi < oj
+		}
+		if failed[i].Status != failed[j].Status {
+			return failed[i].Status == healthcheck.StatusFail
+		}
+		return false
+	})
+	return failed
+}
+
+func buildTechnicalSummary(input ReportInput) string {
+	op := input.OperatorState
+	version := extractClusterVersion(input)
+	var parts []string
+
+	versionClause := ""
+	if version != "" {
+		versionClause = " on OCP " + version
+	}
+
+	switch {
+	case op.Faulty && op.FailureReason != "":
+		parts = append(parts, fmt.Sprintf("The **%s** operator failed%s.", op.PackageName, versionClause))
+
+		for _, cond := range op.Conditions {
+			if cond.Status != "True" || cond.Message == "" {
+				continue
+			}
+			msg := cond.Message
+			if len(msg) > 200 {
+				msg = msg[:200] + "..."
+			}
+			stateDesc := op.State
+			if stateDesc == "" {
+				stateDesc = "unresolved"
+			}
+			parts = append(parts, fmt.Sprintf("The subscription entered a `%s` state with condition `%s`: %q.", stateDesc, cond.Type, msg))
+			break
+		}
+		if len(parts) == 1 {
+			parts = append(parts, fmt.Sprintf("Failure reason: %s.", op.FailureReason))
+		}
+
+	case op.Faulty:
+		stateLabel := op.State
+		if stateLabel == "" {
+			stateLabel = "unknown"
+		}
+		parts = append(parts, fmt.Sprintf("The **%s** operator is in a faulty state (`%s`)%s.", op.PackageName, stateLabel, versionClause))
+
+	case input.HealthReport != nil && input.HealthReport.Failed > 0:
+		parts = append(parts, fmt.Sprintf("The **%s** operator subscription is healthy (`%s`) but %d health dimension(s) indicate runtime problems%s.",
+			op.PackageName, op.State, input.HealthReport.Failed, versionClause))
+
+		failed := failedDimensionsInCausalOrder(input)
+		if len(failed) > 0 {
+			primary := failed[0]
+			if len(primary.Evidence) > 0 {
+				ev := primary.Evidence[0]
+				if len(ev) > 150 {
+					ev = ev[:150] + "..."
+				}
+				parts = append(parts, fmt.Sprintf("The primary failure is in %s: %s (`%s`).", primary.Name, primary.Summary, ev))
+			} else {
+				parts = append(parts, fmt.Sprintf("The primary failure is in %s: %s.", primary.Name, primary.Summary))
+			}
+		}
+
+	default:
+		parts = append(parts, fmt.Sprintf("The **%s** operator passed all systematic health checks%s.", op.PackageName, versionClause))
+	}
+
+	if op.InstalledCSV == "" && (op.Faulty || (input.HealthReport != nil && input.HealthReport.Failed > 0)) {
+		parts = append(parts, "No CSV was installed and no operator pods were deployed.")
+	}
+
+	if input.RAGContext != nil && input.RAGContext.IssueClassification != "" && input.RAGContext.IssueClassification != "unknown" {
+		parts = append(parts, fmt.Sprintf("The root cause is classified as a **%s** issue.", input.RAGContext.IssueClassification))
+	}
+
+	return strings.Join(parts, " ")
+}
+
+func renderEvidenceBlock(b *strings.Builder, evidence []string, maxItems int) {
+	if len(evidence) == 0 {
+		return
+	}
+	b.WriteString("```\n")
+	for i, e := range evidence {
+		if i >= maxItems {
+			b.WriteString(fmt.Sprintf("... and %d more\n", len(evidence)-maxItems))
+			break
+		}
+		b.WriteString(e + "\n")
+	}
+	b.WriteString("```\n")
+}
+
+func determineSeverity(input ReportInput) string {
+	for _, dims := range [][]healthcheck.DimensionResult{
+		func() []healthcheck.DimensionResult {
+			if input.HealthReport != nil {
+				return input.HealthReport.Dimensions
+			}
+			return nil
+		}(),
+		func() []healthcheck.DimensionResult {
+			if input.InfraReport != nil {
+				return input.InfraReport.Dimensions
+			}
+			return nil
+		}(),
+	} {
+		for _, dim := range dims {
+			if dim.Severity == healthcheck.SeverityCritical {
+				return "Critical"
+			}
+		}
+	}
+	if input.HealthReport != nil && input.HealthReport.Warnings > 0 {
+		return "Warning"
+	}
+	return "Healthy"
+}
+
+func dimensionSignificance(dim healthcheck.DimensionResult, classification string) string {
+	switch dim.ID {
+	case healthcheck.DimCatalogSource:
+		return "A CatalogSource failure prevents OLM from discovering any operators, blocking all installations and upgrades in this namespace."
+	case healthcheck.DimSubscription:
+		return "This subscription failure prevents CSV installation, which blocks all operator functionality. No controller pods can be deployed until the subscription resolves."
+	case healthcheck.DimInstallPlan:
+		return "An InstallPlan failure means the resolved operator version cannot be installed. The CSV and operator deployment are blocked."
+	case healthcheck.DimCSVPhase:
+		if classification == "configuration" {
+			return "The CSV did not reach the Succeeded phase, indicating a configuration or dependency issue that prevents operator deployment."
+		}
+		return "The CSV did not reach the Succeeded phase. The operator controller cannot start until the CSV is successfully installed."
+	case healthcheck.DimCSVRequirements:
+		return "Unmet CSV requirements indicate missing API resources or CRDs that the operator depends on."
+	case healthcheck.DimDeploymentReady:
+		return "The operator deployment is not available, meaning the controller is not running and cannot reconcile custom resources."
+	case healthcheck.DimPodHealth:
+		return "Unhealthy pods indicate the operator controller is failing to start or crashing. This prevents all operator functionality."
+	case healthcheck.DimContainerRestarts:
+		return "Elevated container restarts suggest the operator is crash-looping, potentially due to a code bug, misconfiguration, or missing dependency."
+	case healthcheck.DimImagePull:
+		return "Image pull failures prevent the operator pod from starting. This may indicate a disconnected environment, registry authentication issue, or incorrect image reference."
+	case healthcheck.DimScheduling:
+		return "Pods cannot be scheduled, indicating insufficient cluster resources, node affinity conflicts, or taint/toleration mismatches."
+	case healthcheck.DimNodeHealth:
+		return "A NotReady node reduces cluster capacity and may cause workload disruptions across multiple operators."
+	default:
+		if dim.Status == healthcheck.StatusFail {
+			return fmt.Sprintf("This %s check failure requires investigation to determine its impact on operator functionality.", dim.Category)
+		}
+		return fmt.Sprintf("This %s check warning should be monitored to prevent escalation.", dim.Category)
 	}
 }
 
