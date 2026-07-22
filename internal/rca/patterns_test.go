@@ -69,20 +69,21 @@ func TestPatternDetector_DetectPatterns(t *testing.T) {
 			for _, expectedPattern := range tt.expectedPatterns {
 				found := false
 				for _, match := range matches {
-					if match.Pattern == expectedPattern {
-						found = true
-						if match.Confidence < tt.minConfidence {
-							t.Errorf("Pattern %v detected but confidence too low: got %.2f, want >= %.2f",
-								expectedPattern, match.Confidence, tt.minConfidence)
-						}
-						if len(match.Evidence) == 0 {
-							t.Errorf("Pattern %v detected but no evidence provided", expectedPattern)
-						}
-						if match.Description == "" {
-							t.Errorf("Pattern %v detected but no description provided", expectedPattern)
-						}
-						break
+					if match.Pattern != expectedPattern {
+						continue
 					}
+					found = true
+					if match.Confidence < tt.minConfidence {
+						t.Errorf("Pattern %v detected but confidence too low: got %.2f, want >= %.2f",
+							expectedPattern, match.Confidence, tt.minConfidence)
+					}
+					if len(match.Evidence) == 0 {
+						t.Errorf("Pattern %v detected but no evidence provided", expectedPattern)
+					}
+					if match.Description == "" {
+						t.Errorf("Pattern %v detected but no description provided", expectedPattern)
+					}
+					break
 				}
 				if !found {
 					t.Errorf("Expected pattern %v not detected in matches: %v", expectedPattern, matches)
@@ -94,10 +95,10 @@ func TestPatternDetector_DetectPatterns(t *testing.T) {
 
 func TestGetRecommendations(t *testing.T) {
 	tests := []struct {
-		name        string
-		pattern     Pattern
-		context     string
-		minRecs     int
+		name         string
+		pattern      Pattern
+		context      string
+		minRecs      int
 		wantCritical bool
 	}{
 		{
@@ -185,7 +186,7 @@ func TestGetPatternDescription(t *testing.T) {
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) &&
 		(s[:len(substr)] == substr || s[len(s)-len(substr):] == substr ||
-		 findSubstring(s, substr)))
+			findSubstring(s, substr)))
 }
 
 func findSubstring(s, substr string) bool {

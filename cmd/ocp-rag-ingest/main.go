@@ -11,13 +11,17 @@ import (
 )
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	configPath := flag.String("config", "rag-config.yaml", "RAG config file path")
 	flag.Parse()
 
 	cfg, err := rag.LoadConfig(*configPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 
 	fmt.Fprintf(os.Stderr, "  Config:    %s\n", *configPath)
@@ -28,15 +32,16 @@ func main() {
 	engine, err := rag.NewEngine(cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating RAG engine: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 	defer engine.Close()
 
 	ctx := context.Background()
 	if err := ingest.RunIngestion(ctx, cfg, engine.Store()); err != nil {
 		fmt.Fprintf(os.Stderr, "Ingestion failed: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 
 	fmt.Fprintln(os.Stderr, "Ingestion complete.")
+	return 0
 }

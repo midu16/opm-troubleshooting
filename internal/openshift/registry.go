@@ -43,7 +43,7 @@ var RepoRegistry = map[string]RepoInfo{
 	"cluster-version": {Repo: "openshift/cluster-version-operator", Component: "CVO"},
 	"api":             {Repo: "openshift/api", Component: "API Types"},
 	"library-go":      {Repo: "openshift/library-go", Component: "Shared Libraries"},
-	"baremetal":        {Repo: "openshift/cluster-baremetal-operator", Component: "Bare Metal"},
+	"baremetal":       {Repo: "openshift/cluster-baremetal-operator", Component: "Bare Metal"},
 
 	// OLM operators (package name → repo)
 	"sriov-network-operator":           {Repo: "openshift/sriov-network-operator", Component: "SR-IOV"},

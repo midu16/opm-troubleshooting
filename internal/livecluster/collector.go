@@ -48,7 +48,7 @@ var (
 	}
 )
 
-type LiveClusterSource struct {
+type LiveClusterSource struct { //nolint:revive // name is widely used across packages
 	client *Client
 }
 
@@ -74,14 +74,14 @@ func (s *LiveClusterSource) GetSubscriptions(ns string) ([]datasource.OperatorSt
 		status := nestedMap(item.Object, "status")
 
 		op := datasource.OperatorState{
-			PackageName:      nestedStr(spec, "name"),
-			Namespace:        item.GetNamespace(),
-			Channel:          nestedStr(spec, "channel"),
-			InstalledCSV:     nestedStr(status, "installedCSV"),
-			CurrentCSV:       nestedStr(status, "currentCSV"),
-			State:            nestedStr(status, "state"),
-			InstallPlanRef:   nestedStr(nestedMap(status, "installPlanRef"), "name"),
-			Conditions:       extractConditions(status),
+			PackageName:    nestedStr(spec, "name"),
+			Namespace:      item.GetNamespace(),
+			Channel:        nestedStr(spec, "channel"),
+			InstalledCSV:   nestedStr(status, "installedCSV"),
+			CurrentCSV:     nestedStr(status, "currentCSV"),
+			State:          nestedStr(status, "state"),
+			InstallPlanRef: nestedStr(nestedMap(status, "installPlanRef"), "name"),
+			Conditions:     extractConditions(status),
 		}
 		operators = append(operators, op)
 	}
@@ -414,21 +414,23 @@ func (s *LiveClusterSource) GetClusterVersion() (*datasource.ClusterVersionState
 
 	if history, ok := status["history"].([]interface{}); ok {
 		for _, h := range history {
-			if hMap, ok := h.(map[string]interface{}); ok {
-				uh := datasource.UpdateHistory{
-					Version: nestedStr(hMap, "version"),
-					State:   nestedStr(hMap, "state"),
-				}
-				if t, err := time.Parse(time.RFC3339, nestedStr(hMap, "startedTime")); err == nil {
-					uh.StartedAt = t
-				}
-				if t, err := time.Parse(time.RFC3339, nestedStr(hMap, "completionTime")); err == nil {
-					uh.CompletedAt = t
-				}
-				cv.History = append(cv.History, uh)
-				if uh.State == "Completed" && cv.Version == "" {
-					cv.Version = uh.Version
-				}
+			hMap, ok := h.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			uh := datasource.UpdateHistory{
+				Version: nestedStr(hMap, "version"),
+				State:   nestedStr(hMap, "state"),
+			}
+			if t, err := time.Parse(time.RFC3339, nestedStr(hMap, "startedTime")); err == nil {
+				uh.StartedAt = t
+			}
+			if t, err := time.Parse(time.RFC3339, nestedStr(hMap, "completionTime")); err == nil {
+				uh.CompletedAt = t
+			}
+			cv.History = append(cv.History, uh)
+			if uh.State == "Completed" && cv.Version == "" {
+				cv.Version = uh.Version
 			}
 		}
 	}
@@ -461,10 +463,10 @@ func (s *LiveClusterSource) GetMachineConfigPools() ([]datasource.MCPState, erro
 
 		mcp := datasource.MCPState{
 			Name:                 item.GetName(),
-			MachineCount:         int32(nestedInt(status, "machineCount")),
-			ReadyMachineCount:    int32(nestedInt(status, "readyMachineCount")),
-			UpdatedMachineCount:  int32(nestedInt(status, "updatedMachineCount")),
-			DegradedMachineCount: int32(nestedInt(status, "degradedMachineCount")),
+			MachineCount:         int32(nestedInt(status, "machineCount")),         //nolint:gosec // values are small cluster counts
+			ReadyMachineCount:    int32(nestedInt(status, "readyMachineCount")),    //nolint:gosec // values are small cluster counts
+			UpdatedMachineCount:  int32(nestedInt(status, "updatedMachineCount")),  //nolint:gosec // values are small cluster counts
+			DegradedMachineCount: int32(nestedInt(status, "degradedMachineCount")), //nolint:gosec // values are small cluster counts
 			Paused:               nestedBool(spec, "paused"),
 		}
 
@@ -504,7 +506,7 @@ func (s *LiveClusterSource) GetNetworkConfig() (*datasource.NetworkConfigState, 
 			if cnMap, ok := cn.(map[string]interface{}); ok {
 				nc.ClusterNetwork = append(nc.ClusterNetwork, datasource.NetworkRange{
 					CIDR:       nestedStr(cnMap, "cidr"),
-					HostPrefix: int32(nestedInt(cnMap, "hostPrefix")),
+					HostPrefix: int32(nestedInt(cnMap, "hostPrefix")), //nolint:gosec // values are small cluster counts
 				})
 			}
 		}

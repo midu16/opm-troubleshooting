@@ -16,7 +16,7 @@ type IngestMeta struct {
 	RepoCommits map[string]string `json:"repo_commits"`
 }
 
-func SaveIngestMeta(dataDir string, metaFile string, collections []Collection, repoCommits map[string]string) error {
+func SaveIngestMeta(dataDir, metaFile string, collections []Collection, repoCommits map[string]string) error {
 	meta := IngestMeta{
 		Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		Collections: make([]string, len(collections)),
@@ -31,10 +31,10 @@ func SaveIngestMeta(dataDir string, metaFile string, collections []Collection, r
 		return err
 	}
 
-	return os.WriteFile(filepath.Join(dataDir, metaFile), data, 0644)
+	return os.WriteFile(filepath.Join(dataDir, metaFile), data, 0o600)
 }
 
-func LoadIngestMeta(dataDir string, metaFile string) (*IngestMeta, error) {
+func LoadIngestMeta(dataDir, metaFile string) (*IngestMeta, error) {
 	data, err := os.ReadFile(filepath.Join(dataDir, metaFile))
 	if err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func LoadIngestMeta(dataDir string, metaFile string) (*IngestMeta, error) {
 	return &meta, nil
 }
 
-func CheckFreshness(dataDir string, metaFile string) (*FreshnessStatus, error) {
+func CheckFreshness(dataDir, metaFile string) (*FreshnessStatus, error) {
 	meta, err := LoadIngestMeta(dataDir, metaFile)
 	if err != nil {
 		if os.IsNotExist(err) {

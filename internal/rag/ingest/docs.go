@@ -97,7 +97,7 @@ func ScrapeOCPDocs(ctx context.Context, cfg *rag.Config) ([]rag.Document, error)
 	return allDocs, nil
 }
 
-func cloneOrUpdateDocsRepo(ctx context.Context, repoDir string, timeout interface{ Seconds() float64 }) error {
+func cloneOrUpdateDocsRepo(ctx context.Context, repoDir string, _ interface{ Seconds() float64 }) error {
 	if _, err := os.Stat(filepath.Join(repoDir, ".git")); err == nil {
 		fmt.Fprintf(os.Stderr, "  openshift-docs: updating ...\n")
 		cmd := exec.CommandContext(ctx, "git", "pull", "--ff-only")
@@ -208,7 +208,7 @@ type adocChunk struct {
 	text    string
 }
 
-func splitAdocByHeading(text, section, relPath string) []adocChunk {
+func splitAdocByHeading(text, _, relPath string) []adocChunk {
 	lines := strings.Split(text, "\n")
 
 	var chunks []adocChunk
@@ -256,7 +256,6 @@ func splitAdocByHeading(text, section, relPath string) []adocChunk {
 	return chunks
 }
 
-var adocAttrRe = regexp.MustCompile(`\{[a-zA-Z0-9_-]+\}`)
 var adocInlineMacroRe = regexp.MustCompile(`(xref|link|image|btn|menu|kbd)::[^\[]*\[([^\]]*)\]`)
 var adocRolePrefixRe = regexp.MustCompile(`^\[.*\]\s*$`)
 

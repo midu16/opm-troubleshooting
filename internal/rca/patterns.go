@@ -12,19 +12,19 @@ import (
 type Pattern string
 
 const (
-	PatternAsymmetry       Pattern = "ASYMMETRY"         // Different behavior in similar contexts
-	PatternMissingGuard    Pattern = "MISSING_GUARD"     // Missing null/error checks
-	PatternTypeEscalation  Pattern = "TYPE_ESCALATION"   // Error type changes breaking handling
-	PatternStateDivergence Pattern = "STATE_DIVERGENCE"  // Inconsistent state across components
-	PatternDefaultInversion Pattern = "DEFAULT_INVERSION" // Default behavior inverted between versions
-	PatternRaceCondition   Pattern = "RACE_CONDITION"    // Timing-dependent failures
-	PatternErrorSwallowing   Pattern = "ERROR_SWALLOWING"      // Errors silently ignored
-	PatternCertChainBreak    Pattern = "CERTIFICATE_CHAIN_BREAK" // Cert expiry or CA rotation cascade
-	PatternEtcdPressure      Pattern = "ETCD_PRESSURE"          // etcd disk/memory pressure
-	PatternNetworkPartition  Pattern = "NETWORK_PARTITION"      // Partial connectivity loss
-	PatternResourceStarvation Pattern = "RESOURCE_STARVATION"   // Cascading OOM/CPU throttling
-	PatternUpgradeStall      Pattern = "UPGRADE_STALL"          // MCP or ClusterVersion stuck
-	PatternClockSkew         Pattern = "CLOCK_SKEW"             // Time drift causing auth failures
+	PatternAsymmetry          Pattern = "ASYMMETRY"               // Different behavior in similar contexts
+	PatternMissingGuard       Pattern = "MISSING_GUARD"           // Missing null/error checks
+	PatternTypeEscalation     Pattern = "TYPE_ESCALATION"         // Error type changes breaking handling
+	PatternStateDivergence    Pattern = "STATE_DIVERGENCE"        // Inconsistent state across components
+	PatternDefaultInversion   Pattern = "DEFAULT_INVERSION"       // Default behavior inverted between versions
+	PatternRaceCondition      Pattern = "RACE_CONDITION"          // Timing-dependent failures
+	PatternErrorSwallowing    Pattern = "ERROR_SWALLOWING"        // Errors silently ignored
+	PatternCertChainBreak     Pattern = "CERTIFICATE_CHAIN_BREAK" // Cert expiry or CA rotation cascade
+	PatternEtcdPressure       Pattern = "ETCD_PRESSURE"           // etcd disk/memory pressure
+	PatternNetworkPartition   Pattern = "NETWORK_PARTITION"       // Partial connectivity loss
+	PatternResourceStarvation Pattern = "RESOURCE_STARVATION"     // Cascading OOM/CPU throttling
+	PatternUpgradeStall       Pattern = "UPGRADE_STALL"           // MCP or ClusterVersion stuck
+	PatternClockSkew          Pattern = "CLOCK_SKEW"              // Time drift causing auth failures
 )
 
 // PatternMatch holds pattern detection results.
@@ -349,19 +349,19 @@ func (d *PatternDetector) DetectPatterns(failureSymptoms string) []PatternMatch 
 // getPatternDescription returns a human-readable description of the pattern.
 func getPatternDescription(p Pattern) string {
 	descriptions := map[Pattern]string{
-		PatternAsymmetry:       "Different behavior in similar contexts (e.g., phase A tolerates errors, phase B fails)",
-		PatternMissingGuard:    "Missing null/error checks causing crashes",
-		PatternTypeEscalation:  "Error type changes breaking error handling logic",
-		PatternStateDivergence: "Inconsistent state across components or replicas",
-		PatternDefaultInversion:  "Default behavior changed between versions",
-		PatternRaceCondition:    "Timing-dependent failures due to concurrent execution",
-		PatternErrorSwallowing:  "Errors silently ignored or suppressed",
-		PatternCertChainBreak:   "Certificate expiry or CA rotation causing cascading authentication failures",
-		PatternEtcdPressure:     "etcd disk/memory pressure causing API server instability and slow responses",
-		PatternNetworkPartition: "Partial network connectivity loss between nodes or to external services",
+		PatternAsymmetry:          "Different behavior in similar contexts (e.g., phase A tolerates errors, phase B fails)",
+		PatternMissingGuard:       "Missing null/error checks causing crashes",
+		PatternTypeEscalation:     "Error type changes breaking error handling logic",
+		PatternStateDivergence:    "Inconsistent state across components or replicas",
+		PatternDefaultInversion:   "Default behavior changed between versions",
+		PatternRaceCondition:      "Timing-dependent failures due to concurrent execution",
+		PatternErrorSwallowing:    "Errors silently ignored or suppressed",
+		PatternCertChainBreak:     "Certificate expiry or CA rotation causing cascading authentication failures",
+		PatternEtcdPressure:       "etcd disk/memory pressure causing API server instability and slow responses",
+		PatternNetworkPartition:   "Partial network connectivity loss between nodes or to external services",
 		PatternResourceStarvation: "Cascading OOM kills or CPU throttling across dependent workloads",
-		PatternUpgradeStall:     "MachineConfigPool or ClusterVersion stuck in progressing/degraded state",
-		PatternClockSkew:        "Time drift causing certificate validation failures or token expiry",
+		PatternUpgradeStall:       "MachineConfigPool or ClusterVersion stuck in progressing/degraded state",
+		PatternClockSkew:          "Time drift causing certificate validation failures or token expiry",
 	}
 
 	if desc, ok := descriptions[p]; ok {
@@ -372,7 +372,7 @@ func getPatternDescription(p Pattern) string {
 
 // AnalysisRecommendation provides actionable fix recommendations.
 type AnalysisRecommendation struct {
-	Priority    int    // 1=Critical, 2=High, 3=Medium
+	Priority    int // 1=Critical, 2=High, 3=Medium
 	Title       string
 	Description string
 	CodeExample string // Optional code snippet
@@ -390,8 +390,8 @@ func GetRecommendations(pattern Pattern, context string) []AnalysisRecommendatio
 				CodeExample: "if obj != nil && obj.Field != \"\" {\n    // safe to use\n}",
 			},
 			{
-				Priority: 2,
-				Title:    "Use safe navigation operators",
+				Priority:    2,
+				Title:       "Use safe navigation operators",
 				Description: "Consider using safe navigation or optional chaining where available",
 			},
 		}
@@ -411,8 +411,8 @@ func GetRecommendations(pattern Pattern, context string) []AnalysisRecommendatio
 				CodeExample: "if !self._engine_started {\n    return  // skip during startup\n}",
 			},
 			{
-				Priority: 2,
-				Title:    "Introduce message queue",
+				Priority:    2,
+				Title:       "Introduce message queue",
 				Description: "Serialize state changes through a channel/queue to avoid races",
 			},
 		}
@@ -425,8 +425,8 @@ func GetRecommendations(pattern Pattern, context string) []AnalysisRecommendatio
 				Description: "Make error handling consistent between similar code paths",
 			},
 			{
-				Priority: 2,
-				Title:    "Extract common error handler",
+				Priority:    2,
+				Title:       "Extract common error handler",
 				Description: "Create shared error handling function used by all phases",
 			},
 		}
@@ -439,8 +439,8 @@ func GetRecommendations(pattern Pattern, context string) []AnalysisRecommendatio
 				Description: "Add periodic checks to ensure state consistency across components",
 			},
 			{
-				Priority: 2,
-				Title:    "Add state version tracking",
+				Priority:    2,
+				Title:       "Add state version tracking",
 				Description: "Use version numbers or timestamps to detect stale state",
 			},
 		}
@@ -454,8 +454,8 @@ func GetRecommendations(pattern Pattern, context string) []AnalysisRecommendatio
 				CodeExample: "if err != nil {\n    log.Error(err, \"operation failed\")\n    return err\n}",
 			},
 			{
-				Priority: 2,
-				Title:    "Add error metrics",
+				Priority:    2,
+				Title:       "Add error metrics",
 				Description: "Export error counts as Prometheus metrics for visibility",
 			},
 		}

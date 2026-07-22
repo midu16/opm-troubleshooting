@@ -31,7 +31,7 @@ func TestParseDiagnoseArgs_kubeconfig(t *testing.T) {
 	// Create a temp kubeconfig file
 	dir := t.TempDir()
 	kc := filepath.Join(dir, "config")
-	if err := os.WriteFile(kc, []byte("apiVersion: v1"), 0644); err != nil {
+	if err := os.WriteFile(kc, []byte("apiVersion: v1"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

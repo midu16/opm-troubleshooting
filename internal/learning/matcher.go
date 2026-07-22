@@ -21,15 +21,15 @@ type SimilarIssue struct {
 
 // Insights aggregates learning data for RCA report sections.
 type Insights struct {
-	SimilarIssues  []SimilarIssue
-	FrameStats     []metadata.FrameStats
-	TopPatterns    []metadata.PatternStat
-	ExactMatch     *SimilarIssue
+	SimilarIssues []SimilarIssue
+	FrameStats    []metadata.FrameStats
+	TopPatterns   []metadata.PatternStat
+	ExactMatch    *SimilarIssue
 }
 
 // FindSimilarIssues searches the metadata store for fingerprints matching the current symptoms.
 func FindSimilarIssues(store *metadata.MetadataStore, fp metadata.Fingerprint) ([]SimilarIssue, error) {
-	var results []SimilarIssue
+	results := make([]SimilarIssue, 0, 8)
 
 	exact, err := store.FindByHash(fp.SymptomHash)
 	if err != nil {
@@ -45,7 +45,7 @@ func FindSimilarIssues(store *metadata.MetadataStore, fp metadata.Fingerprint) (
 			Resolution:     exact.Resolution,
 			Similarity:     1.0,
 			HitCount:       exact.HitCount,
-			LastSeen:        exact.LastSeen,
+			LastSeen:       exact.LastSeen,
 		})
 	}
 
@@ -66,7 +66,7 @@ func FindSimilarIssues(store *metadata.MetadataStore, fp metadata.Fingerprint) (
 			Resolution:     m.Fingerprint.Resolution,
 			Similarity:     m.Similarity,
 			HitCount:       m.Fingerprint.HitCount,
-			LastSeen:        m.Fingerprint.LastSeen,
+			LastSeen:       m.Fingerprint.LastSeen,
 		})
 	}
 
@@ -92,7 +92,7 @@ func FindSimilarIssues(store *metadata.MetadataStore, fp metadata.Fingerprint) (
 			Resolution:     m.Fingerprint.Resolution,
 			Similarity:     m.Similarity,
 			HitCount:       m.Fingerprint.HitCount,
-			LastSeen:        m.Fingerprint.LastSeen,
+			LastSeen:       m.Fingerprint.LastSeen,
 		})
 	}
 

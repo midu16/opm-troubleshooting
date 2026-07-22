@@ -161,7 +161,7 @@ func TestCalculateTotal(t *testing.T) {
 			likelihood: 1.0,
 			impact:     1.0,
 			evidence:   1.0,
-			wantTotal:  1.0, // 0.40 + 0.25 + 0.35 = 1.0
+			wantTotal:  1.0, // weighted sum: 0.40 + 0.25 + 0.35 totals 1.0
 		},
 		{
 			name:       "all zeros",
@@ -196,14 +196,14 @@ func TestCalculateTotal(t *testing.T) {
 			likelihood: 0.9,
 			impact:     0.7,
 			evidence:   0.8,
-			wantTotal:  0.815, // 0.9*0.40 + 0.7*0.25 + 0.8*0.35 = 0.36 + 0.175 + 0.28
+			wantTotal:  0.815, // (0.9 * 0.40) + (0.7 * 0.25) + (0.8 * 0.35) yields 0.36 + 0.175 + 0.28
 		},
 		{
 			name:       "half scores",
 			likelihood: 0.5,
 			impact:     0.5,
 			evidence:   0.5,
-			wantTotal:  0.5, // 0.5*(0.40+0.25+0.35) = 0.5
+			wantTotal:  0.5, // 0.5 times the sum of all weights (0.40+0.25+0.35) gives 0.5
 		},
 	}
 

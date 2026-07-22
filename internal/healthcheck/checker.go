@@ -56,27 +56,27 @@ const (
 	DimBackupRestore     DimensionID = "backup_restore_status"
 
 	// Infrastructure dimensions
-	DimNodeHealth        DimensionID = "node_health"
-	DimEtcdHealth        DimensionID = "etcd_health"
-	DimAPIServerHealth   DimensionID = "apiserver_health"
-	DimClusterVersion    DimensionID = "cluster_version"
+	DimNodeHealth      DimensionID = "node_health"
+	DimEtcdHealth      DimensionID = "etcd_health"
+	DimAPIServerHealth DimensionID = "apiserver_health"
+	DimClusterVersion  DimensionID = "cluster_version"
 
 	// Networking dimensions
-	DimNetworkOperator   DimensionID = "network_operator"
-	DimDNSHealth         DimensionID = "dns_health"
-	DimIngressHealth     DimensionID = "ingress_health"
+	DimNetworkOperator DimensionID = "network_operator"
+	DimDNSHealth       DimensionID = "dns_health"
+	DimIngressHealth   DimensionID = "ingress_health"
 
 	// Storage dimensions
-	DimPVHealth          DimensionID = "pv_health"
-	DimStorageOperator   DimensionID = "storage_operator"
+	DimPVHealth        DimensionID = "pv_health"
+	DimStorageOperator DimensionID = "storage_operator"
 
 	// Security dimensions
 	DimCertificateExpiry DimensionID = "certificate_expiry"
 	DimAuthOperator      DimensionID = "auth_operator"
 
 	// Platform dimensions
-	DimMCPHealth         DimensionID = "mcp_health"
-	DimMonitoringStack   DimensionID = "monitoring_stack"
+	DimMCPHealth       DimensionID = "mcp_health"
+	DimMonitoringStack DimensionID = "monitoring_stack"
 )
 
 // DimensionResult is the outcome of a single health dimension check.
@@ -171,43 +171,43 @@ var dimensionMeta = map[DimensionID]struct{ Name, Category string }{
 	DimOperatorGroup:     {"OperatorGroup Configuration", "OLM"},
 	DimCSVPhase:          {"ClusterServiceVersion Phase", "OLM"},
 	DimCSVRequirements:   {"CSV Requirement Status", "OLM"},
-	DimDeploymentReady:     {"Deployment Availability", "Workload"},
-	DimPodHealth:           {"Pod Phase Health", "Workload"},
-	DimContainerRestarts:   {"Container Restart Count", "Workload"},
-	DimImagePull:           {"Image Pull Status", "Workload"},
-	DimRBAC:                {"ServiceAccount & RBAC", "Security"},
-	DimWarningEvents:       {"Warning Events", "Events"},
-	DimCRDEstablished:      {"CRD Established Status", "API"},
-	DimWebhooks:            {"Admission Webhooks", "API"},
-	DimResourceQuota:       {"Resource Quota Pressure", "Capacity"},
-	DimScheduling:          {"Node Scheduling Constraints", "Capacity"},
-	DimIDMSMirror:          {"Image Digest Mirror Set", "Disconnected"},
-	DimManagedClusters:     {"Managed Cluster Connectivity", "Telco/ACM"},
-	DimPolicyCompliance:    {"Policy Compliance State", "Telco/TALM"},
-	DimBackupRestore:       {"Backup/Restore Operator Status", "Telco/OADP"},
+	DimDeploymentReady:   {"Deployment Availability", "Workload"},
+	DimPodHealth:         {"Pod Phase Health", "Workload"},
+	DimContainerRestarts: {"Container Restart Count", "Workload"},
+	DimImagePull:         {"Image Pull Status", "Workload"},
+	DimRBAC:              {"ServiceAccount & RBAC", "Security"},
+	DimWarningEvents:     {"Warning Events", "Events"},
+	DimCRDEstablished:    {"CRD Established Status", "API"},
+	DimWebhooks:          {"Admission Webhooks", "API"},
+	DimResourceQuota:     {"Resource Quota Pressure", "Capacity"},
+	DimScheduling:        {"Node Scheduling Constraints", "Capacity"},
+	DimIDMSMirror:        {"Image Digest Mirror Set", "Disconnected"},
+	DimManagedClusters:   {"Managed Cluster Connectivity", "Telco/ACM"},
+	DimPolicyCompliance:  {"Policy Compliance State", "Telco/TALM"},
+	DimBackupRestore:     {"Backup/Restore Operator Status", "Telco/OADP"},
 
 	// Infrastructure
-	DimNodeHealth:        {"Node Health", "Infrastructure"},
-	DimEtcdHealth:        {"etcd Cluster Health", "Infrastructure"},
-	DimAPIServerHealth:   {"API Server Availability", "Infrastructure"},
-	DimClusterVersion:    {"Cluster Version Status", "Infrastructure"},
+	DimNodeHealth:      {"Node Health", "Infrastructure"},
+	DimEtcdHealth:      {"etcd Cluster Health", "Infrastructure"},
+	DimAPIServerHealth: {"API Server Availability", "Infrastructure"},
+	DimClusterVersion:  {"Cluster Version Status", "Infrastructure"},
 
 	// Networking
-	DimNetworkOperator:   {"Network Operator Status", "Networking"},
-	DimDNSHealth:         {"DNS Resolution Health", "Networking"},
-	DimIngressHealth:     {"Ingress Controller Health", "Networking"},
+	DimNetworkOperator: {"Network Operator Status", "Networking"},
+	DimDNSHealth:       {"DNS Resolution Health", "Networking"},
+	DimIngressHealth:   {"Ingress Controller Health", "Networking"},
 
 	// Storage
-	DimPVHealth:          {"PersistentVolume Health", "Storage"},
-	DimStorageOperator:   {"Storage Operator Status", "Storage"},
+	DimPVHealth:        {"PersistentVolume Health", "Storage"},
+	DimStorageOperator: {"Storage Operator Status", "Storage"},
 
 	// Security
 	DimCertificateExpiry: {"Certificate Expiry", "Security"},
 	DimAuthOperator:      {"Authentication Operator", "Security"},
 
 	// Platform
-	DimMCPHealth:         {"MachineConfigPool Health", "Platform"},
-	DimMonitoringStack:   {"Monitoring Stack Health", "Platform"},
+	DimMCPHealth:       {"MachineConfigPool Health", "Platform"},
+	DimMonitoringStack: {"Monitoring Stack Health", "Platform"},
 }
 
 // Run executes the 20 OLM health dimensions against must-gather data.
@@ -308,14 +308,15 @@ func checkDimension(ctx context.Context, id DimensionID, cfg Config, workload *m
 func checkCatalogSource(op mustgather.OperatorState) DimensionResult {
 	r := baseResult(DimCatalogSource)
 	for _, cond := range op.Conditions {
-		if cond.Type == "CatalogSourcesUnhealthy" && cond.Status == "True" {
-			r.Status = StatusFail
-			r.Severity = SeverityCritical
-			r.Summary = "Catalog source is unhealthy"
-			r.Evidence = append(r.Evidence, cond.Message)
-			r.Recommendation = "Verify CatalogSource pod is running and registry credentials are valid"
-			return r
+		if cond.Type != "CatalogSourcesUnhealthy" || cond.Status != "True" {
+			continue
 		}
+		r.Status = StatusFail
+		r.Severity = SeverityCritical
+		r.Summary = "Catalog source is unhealthy"
+		r.Evidence = append(r.Evidence, cond.Message)
+		r.Recommendation = "Verify CatalogSource pod is running and registry credentials are valid"
+		return r
 	}
 	r.Status = StatusPass
 	r.Severity = SeverityHealthy
@@ -337,14 +338,15 @@ func checkSubscription(op mustgather.OperatorState) DimensionResult {
 	}
 	// ResolutionFailed is critical only when the operator never installed
 	for _, cond := range op.Conditions {
-		if cond.Type == "ResolutionFailed" && cond.Status == "True" && op.InstalledCSV == "" {
-			r.Status = StatusFail
-			r.Severity = SeverityCritical
-			r.Summary = "OLM resolution failed"
-			r.Evidence = append(r.Evidence, cond.Message)
-			r.Recommendation = "Verify package exists in catalog and dependency subscriptions resolve"
-			return r
+		if cond.Type != "ResolutionFailed" || cond.Status != "True" || op.InstalledCSV != "" {
+			continue
 		}
+		r.Status = StatusFail
+		r.Severity = SeverityCritical
+		r.Summary = "OLM resolution failed"
+		r.Evidence = append(r.Evidence, cond.Message)
+		r.Recommendation = "Verify package exists in catalog and dependency subscriptions resolve"
+		return r
 	}
 	switch op.State {
 	case "AtLatestKnown":
@@ -487,14 +489,15 @@ func checkCSVRequirements(op mustgather.OperatorState) DimensionResult {
 	}
 
 	for _, cond := range op.Conditions {
-		if cond.Reason == "RequirementsNotMet" && cond.Status == "True" {
-			r.Status = StatusFail
-			r.Severity = SeverityCritical
-			r.Summary = "CSV requirements not met"
-			r.Evidence = append(r.Evidence, cond.Message)
-			r.Recommendation = "Install missing dependencies or CRDs listed in InstallPlan"
-			return r
+		if cond.Reason != "RequirementsNotMet" || cond.Status != "True" {
+			continue
 		}
+		r.Status = StatusFail
+		r.Severity = SeverityCritical
+		r.Summary = "CSV requirements not met"
+		r.Evidence = append(r.Evidence, cond.Message)
+		r.Recommendation = "Install missing dependencies or CRDs listed in InstallPlan"
+		return r
 	}
 	if op.RootCause != nil && len(op.RootCause.MissingCRDs) > 0 {
 		r.Status = StatusFail
@@ -619,7 +622,7 @@ func checkImagePull(wl *mustgather.WorkloadState) DimensionResult {
 	return r
 }
 
-func checkRBAC(cfg Config) DimensionResult {
+func checkRBAC(_ Config) DimensionResult {
 	r := baseResult(DimRBAC)
 	r.Status = StatusPass
 	r.Severity = SeverityHealthy
@@ -662,7 +665,7 @@ func checkCRDEstablished(cfg Config) DimensionResult {
 	return r
 }
 
-func checkWebhooks(cfg Config) DimensionResult {
+func checkWebhooks(_ Config) DimensionResult {
 	r := baseResult(DimWebhooks)
 	r.Status = StatusPass
 	r.Severity = SeverityHealthy
@@ -670,7 +673,7 @@ func checkWebhooks(cfg Config) DimensionResult {
 	return r
 }
 
-func checkResourceQuota(cfg Config) DimensionResult {
+func checkResourceQuota(_ Config) DimensionResult {
 	r := baseResult(DimResourceQuota)
 	r.Status = StatusPass
 	r.Severity = SeverityHealthy
@@ -691,14 +694,15 @@ func checkScheduling(wl *mustgather.WorkloadState) DimensionResult {
 		}
 	}
 	for _, ev := range wl.Events {
-		if ev.Reason == "FailedScheduling" {
-			r.Status = StatusFail
-			r.Severity = SeverityCritical
-			r.Summary = "Pod scheduling failures detected"
-			r.Evidence = append(r.Evidence, ev.Message)
-			r.Recommendation = "Check node resources, taints, tolerations, and affinity rules"
-			return r
+		if ev.Reason != "FailedScheduling" {
+			continue
 		}
+		r.Status = StatusFail
+		r.Severity = SeverityCritical
+		r.Summary = "Pod scheduling failures detected"
+		r.Evidence = append(r.Evidence, ev.Message)
+		r.Recommendation = "Check node resources, taints, tolerations, and affinity rules"
+		return r
 	}
 	if len(pending) > 0 {
 		r.Status = StatusWarn

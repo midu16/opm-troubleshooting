@@ -54,8 +54,9 @@ func LoadOperatorsFromFile(path string) ([]Operator, error) {
 	if err != nil {
 		return nil, err
 	}
-	var ops []Operator
-	for _, line := range stringLines(data) {
+	lines := stringLines(data)
+	ops := make([]Operator, 0, len(lines))
+	for _, line := range lines {
 		fields := splitFields(line)
 		if len(fields) < 2 {
 			continue

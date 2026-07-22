@@ -15,7 +15,7 @@ type Engine struct {
 func NewEngine(cfg *Config) (*Engine, error) {
 	embedFunc := NewOllamaEmbedder(cfg.Embedding.URL, cfg.Embedding.Model)
 
-	store, err := NewStore(cfg.ChromemDir(), EmbeddingFunc(embedFunc))
+	store, err := NewStore(cfg.ChromemDir(), embedFunc)
 	if err != nil {
 		return nil, fmt.Errorf("create store: %w", err)
 	}
@@ -39,8 +39,8 @@ func (e *Engine) Troubleshoot(ctx context.Context, operator string, symptoms []s
 	}
 
 	searches := []struct {
-		coll  Collection
-		topK  int
+		coll   Collection
+		topK   int
 		hybrid bool
 	}{
 		{CollDocs, e.config.Retrieval.DefaultTopK, true},
@@ -142,7 +142,7 @@ func (e *Engine) SearchDocs(ctx context.Context, query string) (*SearchResult, e
 	return docsToSearchResult(query, docs), nil
 }
 
-func (e *Engine) SearchCode(ctx context.Context, query string, operator string) (*SearchResult, error) {
+func (e *Engine) SearchCode(ctx context.Context, query, operator string) (*SearchResult, error) {
 	q := query
 	if operator != "" {
 		q = operator + " " + query
@@ -162,7 +162,7 @@ func (e *Engine) SearchTelcoConfigs(ctx context.Context, query string) (*SearchR
 	return docsToSearchResult(query, docs), nil
 }
 
-func (e *Engine) SearchKnownIssues(ctx context.Context, operator string, version string) (*SearchResult, error) {
+func (e *Engine) SearchKnownIssues(ctx context.Context, operator, version string) (*SearchResult, error) {
 	query := operator
 	if version != "" {
 		query += " " + version

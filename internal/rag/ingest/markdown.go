@@ -95,7 +95,7 @@ func chunkMarkdownFile(path, relPath string) ([]rag.Document, error) {
 	}
 
 	// Build documents with breadcrumb hierarchy.
-	var docs []rag.Document
+	docs := make([]rag.Document, 0, len(sections))
 	// Track headings per level for breadcrumb.
 	headings := make(map[int]string) // level -> heading text
 

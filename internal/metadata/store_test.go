@@ -1064,7 +1064,7 @@ func TestMigrateFromJSON(t *testing.T) {
 	}
 
 	// Running migration again should not duplicate (INSERT OR IGNORE).
-	count, err = store.MigrateFromJSON(sessDir)
+	_, err = store.MigrateFromJSON(sessDir)
 	if err != nil {
 		t.Fatalf("MigrateFromJSON(re-run): %v", err)
 	}

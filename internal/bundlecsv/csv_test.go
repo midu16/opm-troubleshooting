@@ -161,7 +161,7 @@ func tarGzLayer(files map[string][]byte) []byte {
 	for name, content := range files {
 		if err := tw.WriteHeader(&tar.Header{
 			Name: name,
-			Mode: 0644,
+			Mode: 0o644,
 			Size: int64(len(content)),
 		}); err != nil {
 			panic(err)

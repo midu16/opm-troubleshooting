@@ -23,7 +23,7 @@ var sourceDirs = []string{
 // ChunkGoSource walks the relevant subdirectories of repoDir, parses each
 // .go file with go/parser, and emits one Document per top-level declaration
 // (function, type, const, var) together with its doc comments.
-func ChunkGoSource(repoDir string, repoName string) ([]rag.Document, error) {
+func ChunkGoSource(repoDir, repoName string) ([]rag.Document, error) {
 	var docs []rag.Document
 
 	for _, sub := range sourceDirs {
@@ -84,7 +84,7 @@ func parseGoFile(path, repoDir, repoName string) ([]rag.Document, error) {
 	pkgName := f.Name.Name
 	repoURL := "https://github.com/openshift/" + repoName
 
-	var docs []rag.Document
+	docs := make([]rag.Document, 0, len(f.Decls))
 
 	for _, decl := range f.Decls {
 		var buf bytes.Buffer

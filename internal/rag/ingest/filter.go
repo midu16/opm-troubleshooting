@@ -22,12 +22,12 @@ var defaultSkipFilenames = []string{
 
 // Regex patterns for detecting sensitive values in content.
 var (
-	rePassword    = regexp.MustCompile(`(?i)(password|passwd|secret)\s*[:=]\s*\S+`)
-	reToken       = regexp.MustCompile(`(?i)(token|api[_-]?key)\s*[:=]\s*\S+`)
-	reBearer      = regexp.MustCompile(`(?i)Bearer\s+[A-Za-z0-9\-._~+/]+=*`)
-	reBase64Blob  = regexp.MustCompile(`[A-Za-z0-9+/]{40,}={0,2}`)
-	reSSHKey      = regexp.MustCompile(`(?s)-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----.*?-----END (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----`)
-	reK8sSecret   = regexp.MustCompile(`(?m)^kind:\s*(?:Secret|SealedSecret)\s*$`)
+	rePassword   = regexp.MustCompile(`(?i)(password|passwd|secret)\s*[:=]\s*\S+`)
+	reToken      = regexp.MustCompile(`(?i)(token|api[_-]?key)\s*[:=]\s*\S+`)
+	reBearer     = regexp.MustCompile(`(?i)Bearer\s+[A-Za-z0-9\-._~+/]+=*`)
+	reBase64Blob = regexp.MustCompile(`[A-Za-z0-9+/]{40,}={0,2}`)
+	reSSHKey     = regexp.MustCompile(`(?s)-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----.*?-----END (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----`)
+	reK8sSecret  = regexp.MustCompile(`(?m)^kind:\s*(?:Secret|SealedSecret)\s*$`)
 )
 
 // ShouldSkipFile returns true if the file at the given path should be
@@ -70,7 +70,7 @@ func ShouldSkipFile(path string, cfg *rag.SecretConfig) bool {
 //  2. Redact: passwords, tokens, Bearer strings, base64 blobs >= 40 chars,
 //     and SSH private key blocks are replaced with placeholder text.
 //  3. Patterns are applied via compiled regular expressions.
-func FilterAndRedact(path string, content string) (string, bool) {
+func FilterAndRedact(path, content string) (string, bool) {
 	// Tier 1 — skip K8s Secret / SealedSecret resources entirely.
 	if reK8sSecret.MatchString(content) {
 		return "", true

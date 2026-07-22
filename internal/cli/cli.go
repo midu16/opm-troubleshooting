@@ -30,7 +30,7 @@ const (
 )
 
 // CLIError carries an explicit exit code for the main package.
-type CLIError struct {
+type CLIError struct { //nolint:revive // widely used name
 	Code int
 	Err  error
 }
@@ -82,10 +82,10 @@ type config struct {
 	adhdDepth   string
 
 	// Metadata, learning, and repo correlation
-	metadataDir       string
-	enableLearning    bool
-	enableRepoCorr    bool
-	githubToken       string
+	metadataDir    string
+	enableLearning bool
+	enableRepoCorr bool
+	githubToken    string
 
 	// RAG knowledge base
 	ragEnabled    bool
@@ -381,20 +381,20 @@ func runMustGatherAnalysis(ctx context.Context, cfg *config) error {
 	}
 
 	// Analyze each must-gather directory
-	var allResults []*analysis.AnalysisResult
+	allResults := make([]*analysis.AnalysisResult, 0, len(paths))
 	for _, path := range paths {
 		analysisConfig := analysis.AnalysisConfig{
-			MustGatherPath: path,
-			CatalogRef:     cfg.catalog,
-			TargetVersion:  cfg.version,
-			PackageName:    cfg.packageName,
-			TelcoSuite:     cfg.telcoSuite,
-			HealthCheck:    cfg.healthCheck,
-			Environment:    noise.ParseEnvironment(cfg.environment),
-			SourceRepo:     cfg.sourceRepo,
-			GenerateRCA:    cfg.generateRCA,
-			ClusterName:    cfg.clusterName,
-			StateDir:       cfg.stateDir,
+			MustGatherPath:        path,
+			CatalogRef:            cfg.catalog,
+			TargetVersion:         cfg.version,
+			PackageName:           cfg.packageName,
+			TelcoSuite:            cfg.telcoSuite,
+			HealthCheck:           cfg.healthCheck,
+			Environment:           noise.ParseEnvironment(cfg.environment),
+			SourceRepo:            cfg.sourceRepo,
+			GenerateRCA:           cfg.generateRCA,
+			ClusterName:           cfg.clusterName,
+			StateDir:              cfg.stateDir,
 			ADHDEnabled:           cfg.adhdEnabled,
 			ADHDFrames:            cfg.adhdFrames,
 			ADHDDepth:             cfg.adhdDepth,
@@ -402,9 +402,9 @@ func runMustGatherAnalysis(ctx context.Context, cfg *config) error {
 			EnableLearning:        cfg.enableLearning,
 			EnableRepoCorrelation: cfg.enableRepoCorr,
 			GitHubToken:           cfg.githubToken,
-			RAGEnabled:    cfg.ragEnabled,
-			RAGConfigPath: cfg.ragConfigPath,
-			RAGDataDir:    cfg.ragDataDir,
+			RAGEnabled:            cfg.ragEnabled,
+			RAGConfigPath:         cfg.ragConfigPath,
+			RAGDataDir:            cfg.ragDataDir,
 		}
 
 		result, err := analysis.AnalyzeMustGather(ctx, analysisConfig)
@@ -448,7 +448,7 @@ func writeRCAFiles(result *analysis.AnalysisResult, cfg *config) error {
 			}
 			content = combined.String()
 		}
-		return os.WriteFile(cfg.rcaFile, []byte(content), 0o644)
+		return os.WriteFile(cfg.rcaFile, []byte(content), 0o600)
 	}
 
 	// Auto-write to state dir if configured
@@ -456,7 +456,7 @@ func writeRCAFiles(result *analysis.AnalysisResult, cfg *config) error {
 		for i, doc := range result.RCADocuments {
 			filename := fmt.Sprintf("rca-%s-%d.md", result.ClusterName, i+1)
 			path := filepath.Join(cfg.stateDir, filename)
-			if err := os.WriteFile(path, []byte(doc.Markdown), 0o644); err != nil {
+			if err := os.WriteFile(path, []byte(doc.Markdown), 0o600); err != nil {
 				fmt.Fprintf(os.Stderr, "Warning: failed to write RCA to %s: %v\n", path, err)
 			}
 		}

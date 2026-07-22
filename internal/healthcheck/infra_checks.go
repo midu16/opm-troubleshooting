@@ -159,31 +159,32 @@ func checkEtcdHealth(src datasource.ClusterDataSource) DimensionResult {
 	}
 
 	for _, co := range cos {
-		if co.Name == "etcd" {
-			if co.Degraded {
-				r.Status = StatusFail
-				r.Severity = SeverityCritical
-				r.Summary = "etcd cluster operator degraded"
-				for _, cond := range co.Conditions {
-					if cond.Type == "Degraded" && cond.Status == "True" {
-						r.Evidence = append(r.Evidence, cond.Message)
-					}
+		if co.Name != "etcd" {
+			continue
+		}
+		if co.Degraded {
+			r.Status = StatusFail
+			r.Severity = SeverityCritical
+			r.Summary = "etcd cluster operator degraded"
+			for _, cond := range co.Conditions {
+				if cond.Type == "Degraded" && cond.Status == "True" {
+					r.Evidence = append(r.Evidence, cond.Message)
 				}
-				r.Recommendation = "Check etcd pod logs in openshift-etcd namespace and disk performance"
-				return r
 			}
-			if !co.Available {
-				r.Status = StatusFail
-				r.Severity = SeverityCritical
-				r.Summary = "etcd cluster operator not available"
-				r.Recommendation = "Check etcd pods: oc get pods -n openshift-etcd"
-				return r
-			}
-			r.Status = StatusPass
-			r.Severity = SeverityHealthy
-			r.Summary = "etcd cluster operator healthy"
+			r.Recommendation = "Check etcd pod logs in openshift-etcd namespace and disk performance"
 			return r
 		}
+		if !co.Available {
+			r.Status = StatusFail
+			r.Severity = SeverityCritical
+			r.Summary = "etcd cluster operator not available"
+			r.Recommendation = "Check etcd pods: oc get pods -n openshift-etcd"
+			return r
+		}
+		r.Status = StatusPass
+		r.Severity = SeverityHealthy
+		r.Summary = "etcd cluster operator healthy"
+		return r
 	}
 
 	r.Status = StatusSkip
@@ -300,37 +301,38 @@ func checkClusterOperatorByName(src datasource.ClusterDataSource, r DimensionRes
 	}
 
 	for _, co := range cos {
-		if co.Name == name {
-			if co.Degraded {
-				r.Status = StatusFail
-				r.Severity = SeverityCritical
-				r.Summary = fmt.Sprintf("%s operator degraded", name)
-				for _, cond := range co.Conditions {
-					if cond.Type == "Degraded" && cond.Status == "True" {
-						r.Evidence = append(r.Evidence, cond.Message)
-					}
+		if co.Name != name {
+			continue
+		}
+		if co.Degraded {
+			r.Status = StatusFail
+			r.Severity = SeverityCritical
+			r.Summary = fmt.Sprintf("%s operator degraded", name)
+			for _, cond := range co.Conditions {
+				if cond.Type == "Degraded" && cond.Status == "True" {
+					r.Evidence = append(r.Evidence, cond.Message)
 				}
-				r.Recommendation = recommendation
-				return r
 			}
-			if !co.Available {
-				r.Status = StatusFail
-				r.Severity = SeverityCritical
-				r.Summary = fmt.Sprintf("%s operator not available", name)
-				r.Recommendation = recommendation
-				return r
-			}
-			if co.Progressing {
-				r.Status = StatusWarn
-				r.Severity = SeverityWarning
-				r.Summary = fmt.Sprintf("%s operator progressing", name)
-				return r
-			}
-			r.Status = StatusPass
-			r.Severity = SeverityHealthy
-			r.Summary = fmt.Sprintf("%s operator healthy", name)
+			r.Recommendation = recommendation
 			return r
 		}
+		if !co.Available {
+			r.Status = StatusFail
+			r.Severity = SeverityCritical
+			r.Summary = fmt.Sprintf("%s operator not available", name)
+			r.Recommendation = recommendation
+			return r
+		}
+		if co.Progressing {
+			r.Status = StatusWarn
+			r.Severity = SeverityWarning
+			r.Summary = fmt.Sprintf("%s operator progressing", name)
+			return r
+		}
+		r.Status = StatusPass
+		r.Severity = SeverityHealthy
+		r.Summary = fmt.Sprintf("%s operator healthy", name)
+		return r
 	}
 
 	r.Status = StatusSkip

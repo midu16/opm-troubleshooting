@@ -397,10 +397,10 @@ func (s *MustGatherSource) GetMachineConfigPools() ([]MCPState, error) {
 
 		mcp := MCPState{
 			Name:                 yamlStr(metadata, "name"),
-			MachineCount:         int32(yamlInt(status, "machineCount")),
-			ReadyMachineCount:    int32(yamlInt(status, "readyMachineCount")),
-			UpdatedMachineCount:  int32(yamlInt(status, "updatedMachineCount")),
-			DegradedMachineCount: int32(yamlInt(status, "degradedMachineCount")),
+			MachineCount:         int32(yamlInt(status, "machineCount")),         //nolint:gosec // values are small cluster counts
+			ReadyMachineCount:    int32(yamlInt(status, "readyMachineCount")),    //nolint:gosec // values are small cluster counts
+			UpdatedMachineCount:  int32(yamlInt(status, "updatedMachineCount")),  //nolint:gosec // values are small cluster counts
+			DegradedMachineCount: int32(yamlInt(status, "degradedMachineCount")), //nolint:gosec // values are small cluster counts
 			Paused:               yamlBool(spec, "paused"),
 		}
 
@@ -449,7 +449,7 @@ func (s *MustGatherSource) GetNetworkConfig() (*NetworkConfigState, error) {
 		if cnMap, ok := cn.(map[string]interface{}); ok {
 			nc.ClusterNetwork = append(nc.ClusterNetwork, NetworkRange{
 				CIDR:       yamlStr(cnMap, "cidr"),
-				HostPrefix: int32(yamlInt(cnMap, "hostPrefix")),
+				HostPrefix: int32(yamlInt(cnMap, "hostPrefix")), //nolint:gosec // hostPrefix is a small network value
 			})
 		}
 	}
@@ -656,6 +656,8 @@ func (s *MustGatherSource) GetAPIServerStatus() (*APIServerState, error) {
 }
 
 // findClusterScopedResources finds YAML files for cluster-scoped resources.
+//
+//nolint:unparam // error return kept for interface consistency
 func (s *MustGatherSource) findClusterScopedResources(kind string) ([]map[string]interface{}, error) {
 	// Try multiple patterns: direct files, list files, nested API group dirs
 	patterns := []string{

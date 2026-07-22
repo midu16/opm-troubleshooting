@@ -187,7 +187,7 @@ func SelectFrames(tags []string, count int) []Frame {
 		frame Frame
 		score int
 	}
-	scored_frames := make([]scored, len(all))
+	scoredFrames := make([]scored, len(all))
 	for i, f := range all {
 		s := 0
 		for _, ft := range f.Tags {
@@ -195,23 +195,23 @@ func SelectFrames(tags []string, count int) []Frame {
 				s++
 			}
 		}
-		scored_frames[i] = scored{frame: f, score: s}
+		scoredFrames[i] = scored{frame: f, score: s}
 	}
 
 	// Stable sort: highest match score first, then preserve definition order.
-	sort.SliceStable(scored_frames, func(i, j int) bool {
-		return scored_frames[i].score > scored_frames[j].score
+	sort.SliceStable(scoredFrames, func(i, j int) bool {
+		return scoredFrames[i].score > scoredFrames[j].score
 	})
 
 	// Shuffle within same-score tiers to add variety across runs.
 	start := 0
-	for start < len(scored_frames) {
+	for start < len(scoredFrames) {
 		end := start + 1
-		for end < len(scored_frames) && scored_frames[end].score == scored_frames[start].score {
+		for end < len(scoredFrames) && scoredFrames[end].score == scoredFrames[start].score {
 			end++
 		}
 		if end-start > 1 {
-			tier := scored_frames[start:end]
+			tier := scoredFrames[start:end]
 			rand.Shuffle(len(tier), func(i, j int) {
 				tier[i], tier[j] = tier[j], tier[i]
 			})
@@ -222,9 +222,9 @@ func SelectFrames(tags []string, count int) []Frame {
 	// Take top-count, ensuring at least one "wild" frame.
 	selected := make([]Frame, 0, count)
 	hasWild := false
-	for i := 0; i < count && i < len(scored_frames); i++ {
-		selected = append(selected, scored_frames[i].frame)
-		if frameHasTag(scored_frames[i].frame, "wild") {
+	for i := 0; i < count && i < len(scoredFrames); i++ {
+		selected = append(selected, scoredFrames[i].frame)
+		if frameHasTag(scoredFrames[i].frame, "wild") {
 			hasWild = true
 		}
 	}
@@ -232,9 +232,9 @@ func SelectFrames(tags []string, count int) []Frame {
 	// If no wild frame was selected, swap the last selected frame with the
 	// highest-ranked wild frame that was not selected.
 	if !hasWild && len(selected) > 0 {
-		for i := count; i < len(scored_frames); i++ {
-			if frameHasTag(scored_frames[i].frame, "wild") {
-				selected[len(selected)-1] = scored_frames[i].frame
+		for i := count; i < len(scoredFrames); i++ {
+			if frameHasTag(scoredFrames[i].frame, "wild") {
+				selected[len(selected)-1] = scoredFrames[i].frame
 				break
 			}
 		}
@@ -244,6 +244,8 @@ func SelectFrames(tags []string, count int) []Frame {
 }
 
 // frameHasTag returns true if the frame has the given tag.
+//
+//nolint:unparam // tag is "wild" today but will vary as frames evolve
 func frameHasTag(f Frame, tag string) bool {
 	for _, t := range f.Tags {
 		if t == tag {

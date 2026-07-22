@@ -154,7 +154,7 @@ func verifyWithTestServer(t *testing.T, srv *httptest.Server, repoPath string) (
 	ctx := context.Background()
 	apiURL := srv.URL + "/repos/" + repoPath
 
-	req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", apiURL, http.NoBody)
 	if err != nil {
 		return nil, err
 	}

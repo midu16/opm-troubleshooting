@@ -12,6 +12,10 @@ import (
 )
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	configPath := flag.String("config", "rag-config.yaml", "RAG config file path")
 	collection := flag.String("collection", "", "Collection to search: docs, code, telco, issues, manifests (default: troubleshoot all)")
 	operator := flag.String("operator", "", "Operator name (for troubleshoot and code search)")
@@ -24,13 +28,13 @@ func main() {
 	cfg, err := rag.LoadConfig(*configPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 
 	engine, err := rag.NewEngine(cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating RAG engine: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 	defer engine.Close()
 
@@ -40,12 +44,15 @@ func main() {
 		status, err := engine.CheckFreshness()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error checking freshness: %v\n", err)
-			os.Exit(1)
+			return 1
 		}
 		if *jsonOut {
 			enc := json.NewEncoder(os.Stdout)
 			enc.SetIndent("", "  ")
-			enc.Encode(status)
+			if err := enc.Encode(status); err != nil {
+				fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
+				return 1
+			}
 		} else {
 			fmt.Printf("Fresh: %v\n", status.Fresh)
 			fmt.Printf("Message: %s\n", status.Message)
@@ -53,7 +60,7 @@ func main() {
 				fmt.Printf("Ingested at: %s\n", status.IngestedAt)
 			}
 		}
-		return
+		return 0
 	}
 
 	if query == "" {
@@ -66,7 +73,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "  ocp-rag-query --operator cluster-etcd-operator --json pod crash")
 		fmt.Fprintln(os.Stderr, "  ocp-rag-query --freshness")
 		flag.PrintDefaults()
-		os.Exit(1)
+		return 1
 	}
 
 	switch *collection {
@@ -74,7 +81,7 @@ func main() {
 		result, err := engine.SearchDocs(ctx, query)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Search error: %v\n", err)
-			os.Exit(1)
+			return 1
 		}
 		printSearchResult(result, *jsonOut)
 
@@ -82,7 +89,7 @@ func main() {
 		result, err := engine.SearchCode(ctx, query, *operator)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Search error: %v\n", err)
-			os.Exit(1)
+			return 1
 		}
 		printSearchResult(result, *jsonOut)
 
@@ -90,7 +97,7 @@ func main() {
 		result, err := engine.SearchTelcoConfigs(ctx, query)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Search error: %v\n", err)
-			os.Exit(1)
+			return 1
 		}
 		printSearchResult(result, *jsonOut)
 
@@ -98,7 +105,7 @@ func main() {
 		result, err := engine.SearchKnownIssues(ctx, *operator, "")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Search error: %v\n", err)
-			os.Exit(1)
+			return 1
 		}
 		printSearchResult(result, *jsonOut)
 
@@ -106,7 +113,7 @@ func main() {
 		result, err := engine.SearchManifests(ctx, query)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Search error: %v\n", err)
-			os.Exit(1)
+			return 1
 		}
 		printSearchResult(result, *jsonOut)
 
@@ -118,21 +125,22 @@ func main() {
 		result, err := engine.Troubleshoot(ctx, op, []string{query}, "")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Troubleshoot error: %v\n", err)
-			os.Exit(1)
+			return 1
 		}
 		printTroubleshootResult(result, *jsonOut)
 
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown collection: %s (valid: docs, code, telco, issues, manifests)\n", *collection)
-		os.Exit(1)
+		return 1
 	}
+	return 0
 }
 
 func printSearchResult(result *rag.SearchResult, asJSON bool) {
 	if asJSON {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
-		enc.Encode(result)
+		_ = enc.Encode(result)
 		return
 	}
 
@@ -153,7 +161,7 @@ func printTroubleshootResult(result *rag.TroubleshootResult, asJSON bool) {
 	if asJSON {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
-		enc.Encode(result)
+		_ = enc.Encode(result)
 		return
 	}
 

@@ -74,15 +74,15 @@ func (s *MetadataStore) GetTopPatterns(limit int) ([]PatternStat, error) {
 
 // RepoIssue caches a GitHub issue fetched from an OpenShift repo.
 type RepoIssue struct {
-	ID           int64
-	Repo         string
-	IssueNumber  int
-	Title        string
-	State        string
-	Labels       string
-	BodyExcerpt  string
-	SymptomHash  string
-	FetchedAt    time.Time
+	ID          int64
+	Repo        string
+	IssueNumber int
+	Title       string
+	State       string
+	Labels      string
+	BodyExcerpt string
+	SymptomHash string
+	FetchedAt   time.Time
 }
 
 // SaveRepoIssue caches a GitHub issue.
@@ -94,8 +94,13 @@ func (s *MetadataStore) SaveRepoIssue(issue RepoIssue) error {
 }
 
 // GetCachedIssues returns cached issues for a repo, optionally filtered by symptom hash.
-func (s *MetadataStore) GetCachedIssues(repo string, symptomHash string) ([]RepoIssue, error) {
-	var rows interface{ Next() bool; Scan(...interface{}) error; Close() error; Err() error }
+func (s *MetadataStore) GetCachedIssues(repo, symptomHash string) ([]RepoIssue, error) {
+	var rows interface {
+		Next() bool
+		Scan(...interface{}) error
+		Close() error
+		Err() error
+	}
 	var err error
 	if symptomHash != "" {
 		rows, err = s.db.Query(`SELECT id, repo, issue_number, title, state, COALESCE(labels, ''),

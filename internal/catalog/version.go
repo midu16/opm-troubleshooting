@@ -60,7 +60,7 @@ func VersionsInChannel(cfg *declcfg.DeclarativeConfig, packageName, channelName 
 	}
 
 	seen := make(map[string]struct{})
-	var versions []string
+	versions := make([]string, 0, len(channel.Entries))
 	for _, entry := range channel.Entries {
 		if entry.Name == "" {
 			continue

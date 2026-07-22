@@ -66,7 +66,9 @@ func inspectBundle(ctx context.Context, imageRef string, opts ...remote.Option) 
 		return nil, fmt.Errorf("parse image reference %q: %w", imageRef, err)
 	}
 
-	allOpts := append(opts, remote.WithContext(ctx))
+	allOpts := make([]remote.Option, len(opts))
+	copy(allOpts, opts)
+	allOpts = append(allOpts, remote.WithContext(ctx))
 	img, err := remote.Image(ref, allOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("pull image %q: %w", imageRef, err)
@@ -95,6 +97,7 @@ func inspectBundle(ctx context.Context, imageRef string, opts ...remote.Option) 
 	}, nil
 }
 
+//nolint:unparam // error return kept for interface flexibility
 func bundleDisplayName(ref name.Reference, img v1.Image) (string, error) {
 	if tagged, ok := ref.(name.Tag); ok {
 		return tagged.String(), nil

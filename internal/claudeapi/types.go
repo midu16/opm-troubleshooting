@@ -3,10 +3,10 @@ package claudeapi
 // AnalysisRequest encapsulates the fault analysis prompt.
 type AnalysisRequest struct {
 	OperatorName     string
-	FailureSymptoms  string   // Human-readable description of failure
+	FailureSymptoms  string // Human-readable description of failure
 	InstalledVersion string
 	TargetVersion    string
-	CommitDelta      string   // Git diff output
+	CommitDelta      string // Git diff output
 	FilesChanged     []string
 }
 
