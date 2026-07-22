@@ -25,22 +25,22 @@ type Document struct {
 
 // ReportInput aggregates all analysis outputs for RCA generation.
 type ReportInput struct {
-	ClusterName    string
-	Environment    noise.Environment
-	MustGatherPath string
-	Operator       string
-	Namespace      string
-	OperatorState  mustgather.OperatorState
-	InstalledBundle *imageinspect.BundleInfo
-	TargetBundle    *imageinspect.BundleInfo
-	CommitDelta     *gitdelta.CommitDelta
-	ClaudeAnalysis  *claudeapi.AnalysisResponse
-	RCAPatterns     []PatternMatch
-	Recommendations []AnalysisRecommendation
-	HealthReport    *healthcheck.Report
-	InfraReport     *healthcheck.Report
-	NoiseReport     *noise.FilterReport
-	CodeAnalysis    *codeanalysis.Result
+	ClusterName      string
+	Environment      noise.Environment
+	MustGatherPath   string
+	Operator         string
+	Namespace        string
+	OperatorState    mustgather.OperatorState
+	InstalledBundle  *imageinspect.BundleInfo
+	TargetBundle     *imageinspect.BundleInfo
+	CommitDelta      *gitdelta.CommitDelta
+	ClaudeAnalysis   *claudeapi.AnalysisResponse
+	RCAPatterns      []PatternMatch
+	Recommendations  []AnalysisRecommendation
+	HealthReport     *healthcheck.Report
+	InfraReport      *healthcheck.Report
+	NoiseReport      *noise.FilterReport
+	CodeAnalysis     *codeanalysis.Result
 	Session          *session.Record
 	ADHDResult       *adhd.DiagnosisResult
 	RepoCorrelation  *RepoCorrelationData
@@ -216,17 +216,18 @@ func writeExecutiveSummary(b *strings.Builder, input ReportInput) {
 	}
 
 	op := input.OperatorState
-	if op.Faulty {
+	switch {
+	case op.Faulty:
 		b.WriteString(fmt.Sprintf(
 			"Operator **%s** is in a faulty state (`%s`). ",
 			op.PackageName, op.State,
 		))
-	} else if input.HealthReport != nil && input.HealthReport.Failed > 0 {
+	case input.HealthReport != nil && input.HealthReport.Failed > 0:
 		b.WriteString(fmt.Sprintf(
 			"Operator **%s** subscription appears healthy but **%d** health dimension(s) failed. ",
 			op.PackageName, input.HealthReport.Failed,
 		))
-	} else {
+	default:
 		b.WriteString(fmt.Sprintf("Operator **%s** passed systematic health checks. ", op.PackageName))
 	}
 
@@ -638,20 +639,21 @@ func writeSourceCodeCorrelation(b *strings.Builder, input ReportInput) {
 
 	// Commit-Pinned Analysis
 	b.WriteString("### Commit Analysis\n\n")
-	if rc.CommitPinned && rc.BundleCommit != "" {
+	switch {
+	case rc.CommitPinned && rc.BundleCommit != "":
 		commitShort := rc.BundleCommit
 		if len(commitShort) > 12 {
 			commitShort = commitShort[:12]
 		}
 		b.WriteString(fmt.Sprintf("Analysis pinned to deployed commit `%s`. ", commitShort))
 		b.WriteString("This ensures code correlation reflects the exact version running in the cluster, not the latest upstream changes.\n\n")
-	} else if rc.BundleCommit != "" {
+	case rc.BundleCommit != "":
 		commitShort := rc.BundleCommit
 		if len(commitShort) > 12 {
 			commitShort = commitShort[:12]
 		}
 		b.WriteString(fmt.Sprintf("Deployed commit: `%s` (analysis performed at HEAD — commit-pinned analysis was unavailable).\n\n", commitShort))
-	} else {
+	default:
 		b.WriteString("No deployed commit hash available. Analysis performed at repository HEAD.\n\n")
 	}
 
@@ -869,11 +871,11 @@ func writeAppendix(b *strings.Builder, input ReportInput) {
 	}
 }
 
-func truncate(s string, max int) string {
+func truncate(s string, maxLen int) string {
 	s = strings.ReplaceAll(s, "|", "/")
 	s = strings.ReplaceAll(s, "\n", " ")
-	if len(s) <= max {
+	if len(s) <= maxLen {
 		return s
 	}
-	return s[:max-3] + "..."
+	return s[:maxLen-3] + "..."
 }

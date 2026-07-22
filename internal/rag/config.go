@@ -31,12 +31,12 @@ type OpenShiftConfig struct {
 }
 
 type RetrievalConfig struct {
-	DefaultTopK        int `json:"default_top_k"`
-	CodeTopK           int `json:"code_top_k"`
-	ConfigTopK         int `json:"config_top_k"`
-	IssuesTopK         int `json:"issues_top_k"`
+	DefaultTopK          int `json:"default_top_k"`
+	CodeTopK             int `json:"code_top_k"`
+	ConfigTopK           int `json:"config_top_k"`
+	IssuesTopK           int `json:"issues_top_k"`
 	KeywordSupplementMax int `json:"keyword_supplement_max"`
-	KeywordMinLength   int `json:"keyword_min_length"`
+	KeywordMinLength     int `json:"keyword_min_length"`
 }
 
 type ChunkingConfig struct {
@@ -114,12 +114,12 @@ func DefaultConfig() *Config {
 			},
 		},
 		Retrieval: RetrievalConfig{
-			DefaultTopK:        8,
-			CodeTopK:           6,
-			ConfigTopK:         4,
-			IssuesTopK:         5,
+			DefaultTopK:          8,
+			CodeTopK:             6,
+			ConfigTopK:           4,
+			IssuesTopK:           5,
 			KeywordSupplementMax: 4,
-			KeywordMinLength:   4,
+			KeywordMinLength:     4,
 		},
 		Chunking: ChunkingConfig{
 			ChunkSize:    1200,

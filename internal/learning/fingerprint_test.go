@@ -68,10 +68,10 @@ func TestBuildFingerprint(t *testing.T) {
 
 	// Verify specific symptoms are present
 	wantSymptoms := map[string]bool{
-		"state:failed":               false,
-		"health:crd established status:fail": false,
+		"state:failed":                        false,
+		"health:crd established status:fail":  false,
 		"health:deployment availability:fail": false,
-		"pattern:missing_guard":      false,
+		"pattern:missing_guard":               false,
 	}
 	for _, s := range fp.Symptoms {
 		if _, ok := wantSymptoms[s]; ok {
@@ -204,9 +204,9 @@ func TestBuildFingerprintEmpty(t *testing.T) {
 
 func TestBuildFingerprintClassification(t *testing.T) {
 	tests := []struct {
-		name           string
-		failureReason  string
-		wantClass      string
+		name          string
+		failureReason string
+		wantClass     string
 	}{
 		{
 			name:          "missing CRD triggers configuration",

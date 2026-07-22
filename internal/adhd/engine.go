@@ -172,7 +172,7 @@ func (e *Engine) diverge(ctx context.Context, problem string, symptoms []string,
 
 	wg.Wait()
 
-	var branches []Branch
+	branches := make([]Branch, 0, len(results))
 	var errs []string
 	for _, r := range results {
 		if r.err != nil {
@@ -255,7 +255,7 @@ func formatSnapshot(snap *ClusterSnapshot) string {
 }
 
 // parseDivergeResponse extracts hypotheses from a Claude JSON response.
-func parseDivergeResponse(raw string, frameID string) []Hypothesis {
+func parseDivergeResponse(raw, frameID string) []Hypothesis {
 	// Strip markdown code fences if present.
 	cleaned := strings.TrimSpace(raw)
 	if strings.HasPrefix(cleaned, "```") {
@@ -437,6 +437,8 @@ func (e *Engine) cluster(ctx context.Context, problem string, hypotheses []Hypot
 // ---------------------------------------------------------------------------
 
 // deepen generates investigation guidance for top hypotheses.
+//
+//nolint:unparam // error return reserved for future use
 func (e *Engine) deepen(ctx context.Context, problem string, shortlist []Hypothesis, snap *ClusterSnapshot) ([]DeepenedHypothesis, error) {
 	deepened := make([]DeepenedHypothesis, 0, len(shortlist))
 
@@ -605,11 +607,12 @@ func BuildClusterSnapshot(src datasource.ClusterDataSource) (*ClusterSnapshot, e
 		var mcpParts []string
 		for _, mcp := range mcps {
 			status := "ok"
-			if mcp.Degraded {
+			switch {
+			case mcp.Degraded:
 				status = "DEGRADED"
-			} else if mcp.Updating {
+			case mcp.Updating:
 				status = "updating"
-			} else if mcp.Paused {
+			case mcp.Paused:
 				status = "paused"
 			}
 			mcpParts = append(mcpParts, fmt.Sprintf("%s=%s (%d/%d ready)", mcp.Name, status, mcp.ReadyMachineCount, mcp.MachineCount))
@@ -686,13 +689,13 @@ func truncate(s string, maxLen int) string {
 	return s[:maxLen-3] + "..."
 }
 
-// clampFloat constrains v to [min, max].
-func clampFloat(v, min, max float64) float64 {
-	if v < min {
-		return min
+// clampFloat constrains v to [minVal, maxVal].
+func clampFloat(v, minVal, maxVal float64) float64 {
+	if v < minVal {
+		return minVal
 	}
-	if v > max {
-		return max
+	if v > maxVal {
+		return maxVal
 	}
 	return v
 }

@@ -20,7 +20,7 @@ linters:
     - unparam
     - prealloc
     - noctx
-    - exportloopref
+    - copyloopvar
     - gocritic
     - whitespace
 

@@ -13,11 +13,11 @@ import (
 
 // SymptomInput holds the data needed to build a fingerprint.
 type SymptomInput struct {
-	Operator      mustgather.OperatorState
-	HealthReport  *healthcheck.Report
-	InfraReport   *healthcheck.Report
-	NoiseReport   *noise.FilterReport
-	RCAPatterns   []rca.PatternMatch
+	Operator     mustgather.OperatorState
+	HealthReport *healthcheck.Report
+	InfraReport  *healthcheck.Report
+	NoiseReport  *noise.FilterReport
+	RCAPatterns  []rca.PatternMatch
 }
 
 // BuildFingerprint creates an issue fingerprint from analysis results.

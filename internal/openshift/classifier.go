@@ -114,11 +114,11 @@ func containsAny(text string, keywords []string) bool {
 	return false
 }
 
-func truncate(s string, max int) string {
-	if len(s) <= max {
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
 		return s
 	}
-	return s[:max-3] + "..."
+	return s[:maxLen-3] + "..."
 }
 
 var codeChangeKeywords = []string{
@@ -157,7 +157,8 @@ func ClassifyEnhanced(
 	keywordScore := 0.0
 	keywordType := ClassUnknown
 
-	if hasCodeMatches {
+	switch {
+	case hasCodeMatches:
 		keywordScore = 1.0
 		keywordType = ClassCodeBug
 		result.Evidence = append(result.Evidence, "Error string found in operator source code")
@@ -170,11 +171,11 @@ func ClassifyEnhanced(
 			keywordScore = 0.6
 			result.Evidence = append(result.Evidence, "Error also relates to configuration — could be validation code rather than a bug")
 		}
-	} else if isConfigRelated && !hasInfraFailures {
+	case isConfigRelated && !hasInfraFailures:
 		keywordScore = 0.7
 		keywordType = ClassConfiguration
 		result.Evidence = append(result.Evidence, "Error relates to configuration (RBAC, CRDs, resource specs)")
-	} else if hasInfraFailures || isInfraRelated {
+	case hasInfraFailures || isInfraRelated:
 		keywordScore = 0.7
 		keywordType = ClassInfrastructure
 		result.Evidence = append(result.Evidence, "Error relates to infrastructure (nodes, network, storage)")
@@ -185,7 +186,7 @@ func ClassifyEnhanced(
 				}
 			}
 		}
-	} else if failureReason != "" {
+	case failureReason != "":
 		keywordScore = 0.3
 		keywordType = ClassConfiguration
 		result.Evidence = append(result.Evidence, "No code match found — likely a configuration or environmental issue")
@@ -249,15 +250,16 @@ func ClassifyEnhanced(
 	}
 
 	// Determine final type: code matches take priority, then delta, then keywords
-	if keywordType == ClassCodeBug {
+	switch {
+	case keywordType == ClassCodeBug:
 		result.Type = ClassCodeBug
-	} else if deltaType == ClassCodeBug && deltaScore > 0.5 {
+	case deltaType == ClassCodeBug && deltaScore > 0.5:
 		result.Type = ClassCodeBug
-	} else if keywordType == ClassInfrastructure {
+	case keywordType == ClassInfrastructure:
 		result.Type = ClassInfrastructure
-	} else if keywordType == ClassConfiguration || deltaType == ClassConfiguration {
+	case keywordType == ClassConfiguration || deltaType == ClassConfiguration:
 		result.Type = ClassConfiguration
-	} else if keywordType != ClassUnknown {
+	case keywordType != ClassUnknown:
 		result.Type = keywordType
 	}
 

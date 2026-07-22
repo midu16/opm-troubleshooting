@@ -106,7 +106,7 @@ func CSVDocument(img v1.Image) (map[string]interface{}, error) {
 	return nil, fmt.Errorf("clusterserviceversion not found in bundle image")
 }
 
-func csvDocumentFromLayer(layer v1.Layer) (map[string]interface{}, bool, error) {
+func csvDocumentFromLayer(layer v1.Layer) (doc map[string]interface{}, found bool, err error) {
 	rc, err := layer.Uncompressed()
 	if err != nil {
 		return nil, false, fmt.Errorf("open layer: %w", err)
@@ -280,7 +280,7 @@ func repositoryURLsFromSpecLinks(doc map[string]interface{}) []string {
 		return nil
 	}
 
-	var scored []scoredURL
+	scored := make([]scoredURL, 0, len(raw))
 	for _, item := range raw {
 		m, ok := item.(map[string]interface{})
 		if !ok {
@@ -380,8 +380,7 @@ func extractGitRepoURLs(val string) []string {
 
 func normalizeDocsSiteURL(u string) string {
 	lower := strings.ToLower(strings.TrimSpace(u))
-	switch {
-	case strings.Contains(lower, "csi-addons.github.io"):
+	if strings.Contains(lower, "csi-addons.github.io") {
 		return "https://github.com/csi-addons/kubernetes"
 	}
 	return ""

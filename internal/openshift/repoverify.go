@@ -67,7 +67,7 @@ func verifyWithGH(ctx context.Context, repoPath string) (*RepoVerification, erro
 func verifyWithREST(ctx context.Context, repoPath string) (*RepoVerification, error) {
 	apiURL := fmt.Sprintf("https://api.github.com/repos/%s", repoPath)
 
-	req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", apiURL, http.NoBody)
 	if err != nil {
 		return &RepoVerification{Exists: false, Error: err.Error()}, nil
 	}
@@ -132,15 +132,16 @@ func ExtractRepoPath(fullURL string) string {
 		"https://github.com/",
 		"http://github.com/",
 	} {
-		if strings.HasPrefix(fullURL, prefix) {
-			path := strings.TrimPrefix(fullURL, prefix)
-			path = strings.TrimSuffix(path, "/")
-			parts := strings.SplitN(path, "/", 3)
-			if len(parts) >= 2 && parts[0] != "" && parts[1] != "" {
-				return parts[0] + "/" + parts[1]
-			}
-			return ""
+		if !strings.HasPrefix(fullURL, prefix) {
+			continue
 		}
+		path := strings.TrimPrefix(fullURL, prefix)
+		path = strings.TrimSuffix(path, "/")
+		parts := strings.SplitN(path, "/", 3)
+		if len(parts) >= 2 && parts[0] != "" && parts[1] != "" {
+			return parts[0] + "/" + parts[1]
+		}
+		return ""
 	}
 
 	return ""

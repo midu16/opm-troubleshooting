@@ -28,7 +28,7 @@ func RunIngestion(ctx context.Context, cfg *rag.Config, store *rag.Store) error 
 
 	// Step 1: Create data directories.
 	for _, dir := range []string{reposDir, docsDir} {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return fmt.Errorf("create directory %s: %w", dir, err)
 		}
 	}
@@ -165,7 +165,6 @@ func cloneAllRepos(ctx context.Context, cfg *rag.Config, reposDir string) (map[s
 	g.SetLimit(maxParallel)
 
 	for _, repo := range cfg.OpenShift.Repos {
-		repo := repo
 		g.Go(func() error {
 			repoDir := filepath.Join(reposDir, repo)
 			timeout := cfg.Ingestion.GitTimeout.Duration

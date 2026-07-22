@@ -19,23 +19,23 @@ type WorkloadState struct {
 
 // DeploymentState represents a Deployment resource snapshot.
 type DeploymentState struct {
-	Name            string
-	Replicas        int32
-	ReadyReplicas   int32
-	Available       bool
-	Progressing     bool
-	ProgressingMsg  string
-	UnavailableMsg  string
+	Name           string
+	Replicas       int32
+	ReadyReplicas  int32
+	Available      bool
+	Progressing    bool
+	ProgressingMsg string
+	UnavailableMsg string
 }
 
 // PodState represents a Pod resource snapshot.
 type PodState struct {
-	Name            string
-	Phase           string
-	Ready           bool
-	RestartCount    int32
-	WaitingReason   string
-	WaitingMessage  string
+	Name             string
+	Phase            string
+	Ready            bool
+	RestartCount     int32
+	WaitingReason    string
+	WaitingMessage   string
 	TerminatedReason string
 }
 
@@ -125,8 +125,8 @@ func parseDeploymentFile(path string) (DeploymentState, error) {
 
 	dep := DeploymentState{
 		Name:          getString(metadata, "name"),
-		Replicas:      int32(getInt(status, "replicas")),
-		ReadyReplicas: int32(getInt(status, "readyReplicas")),
+		Replicas:      int32(getInt(status, "replicas")),      //nolint:gosec // values are small replica counts
+		ReadyReplicas: int32(getInt(status, "readyReplicas")), //nolint:gosec // values are small replica counts
 	}
 
 	for _, item := range getSlice(status, "conditions") {
@@ -189,7 +189,7 @@ func parsePodFile(path string) (PodState, error) {
 		if !ok {
 			continue
 		}
-		pod.RestartCount += int32(getInt(cMap, "restartCount"))
+		pod.RestartCount += int32(getInt(cMap, "restartCount")) //nolint:gosec // values are small replica counts
 
 		state := getMap(cMap, "state")
 		if waiting := getMap(state, "waiting"); len(waiting) > 0 {
@@ -262,7 +262,7 @@ func getInt(m map[string]interface{}, key string) int {
 }
 
 // ParseClusterResources scans cluster-scoped resources like IDMS.
-func ParseClusterResources(mustGatherRoot string, kind string) ([]map[string]interface{}, error) {
+func ParseClusterResources(mustGatherRoot, kind string) ([]map[string]interface{}, error) {
 	pattern := filepath.Join(mustGatherRoot, "*", "cluster-scoped-resources", "*", "*", kind, "*.yaml")
 	matches, err := filepath.Glob(pattern)
 	if err != nil {

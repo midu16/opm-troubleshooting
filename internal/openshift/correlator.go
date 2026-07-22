@@ -17,7 +17,7 @@ type Correlation struct {
 	RepoPath        string               `json:"repo_path"`
 	RepoURL         string               `json:"repo_url"`
 	Classification  Classification       `json:"classification"`
-	CodeMatches     []codeanalysis.Match  `json:"code_matches,omitempty"`
+	CodeMatches     []codeanalysis.Match `json:"code_matches,omitempty"`
 	GitHubIssues    []GitHubIssue        `json:"github_issues,omitempty"`
 	RecentCommits   []CommitInfo         `json:"recent_commits,omitempty"`
 	Evidence        []string             `json:"evidence"`
@@ -72,11 +72,12 @@ func Correlate(ctx context.Context, operator, failureReason string, cfg Correlat
 	verification, err := VerifyRepo(ctx, repoPath)
 	if err == nil && verification != nil {
 		result.RepoVerified = verification.Verified && verification.Exists
-		if verification.Exists {
+		switch {
+		case verification.Exists:
 			result.Evidence = append(result.Evidence, "Repository verified on GitHub")
-		} else if verification.Verified {
+		case verification.Verified:
 			result.Evidence = append(result.Evidence, "Repository NOT found on GitHub")
-		} else if verification.Error != "" {
+		case verification.Error != "":
 			result.Evidence = append(result.Evidence, fmt.Sprintf("GitHub verification inconclusive: %s", verification.Error))
 		}
 	}

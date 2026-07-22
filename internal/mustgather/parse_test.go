@@ -120,8 +120,8 @@ func TestIsFaulty(t *testing.T) {
 func TestBuildFailureReason(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
-		name     string
-		operator OperatorState
+		name         string
+		operator     OperatorState
 		wantContains []string
 	}{
 		{

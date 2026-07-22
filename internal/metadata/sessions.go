@@ -92,7 +92,7 @@ type SessionStats struct {
 	TotalRuns     int
 	FailedRuns    int
 	LastStatus    string
-	LastTimestamp  time.Time
+	LastTimestamp time.Time
 	TopPatterns   []string
 }
 

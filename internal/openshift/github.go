@@ -44,10 +44,10 @@ func searchWithGH(ctx context.Context, repoPath, query string) ([]GitHubIssue, e
 	}
 
 	var ghResults []struct {
-		Number    int    `json:"number"`
-		Title     string `json:"title"`
-		State     string `json:"state"`
-		Labels    []struct {
+		Number int    `json:"number"`
+		Title  string `json:"title"`
+		State  string `json:"state"`
+		Labels []struct {
 			Name string `json:"name"`
 		} `json:"labels"`
 		URL       string    `json:"url"`
@@ -88,7 +88,7 @@ func searchWithREST(ctx context.Context, repoPath, query string) ([]GitHubIssue,
 	apiURL := fmt.Sprintf("https://api.github.com/search/issues?q=%s&per_page=10&sort=updated&order=desc",
 		url.QueryEscape(searchQuery))
 
-	req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", apiURL, http.NoBody)
 	if err != nil {
 		return nil, err
 	}

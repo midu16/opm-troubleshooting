@@ -19,17 +19,17 @@ type Match struct {
 
 // Result holds code-level correlation findings.
 type Result struct {
-	RepoPath       string  `json:"repo_path"`
+	RepoPath       string   `json:"repo_path"`
 	SearchPatterns []string `json:"search_patterns"`
-	Matches        []Match `json:"matches"`
-	Summary        string  `json:"summary"`
+	Matches        []Match  `json:"matches"`
+	Summary        string   `json:"summary"`
 }
 
 // Config specifies code analysis parameters.
 type Config struct {
-	RepoPath        string   // Local clone path
-	SearchPatterns  []string // Error strings / log patterns to find
-	MaxMatches      int
+	RepoPath          string   // Local clone path
+	SearchPatterns    []string // Error strings / log patterns to find
+	MaxMatches        int
 	IncludeExtensions []string
 }
 
@@ -173,7 +173,7 @@ func parseGrepOutput(output, pattern string, maxMatches int) []Match {
 			continue
 		}
 		lineNum := 0
-		fmt.Sscanf(parts[1], "%d", &lineNum)
+		_, _ = fmt.Sscanf(parts[1], "%d", &lineNum)
 		matches = append(matches, Match{
 			FilePath:    parts[0],
 			LineNumber:  lineNum,

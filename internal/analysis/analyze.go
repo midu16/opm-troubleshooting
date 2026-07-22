@@ -514,22 +514,22 @@ func analyzeSingleOperator(
 	// Step 12: Generate RCA document
 	if cfg.GenerateRCA {
 		rcaInput := rcamod.ReportInput{
-			ClusterName:     cfg.ClusterName,
-			Environment:     cfg.Environment,
-			MustGatherPath:  cfg.MustGatherPath,
-			Operator:        op.PackageName,
-			Namespace:       op.Namespace,
-			OperatorState:   op,
-			InstalledBundle: report.InstalledBundle,
-			TargetBundle:    report.TargetBundle,
-			CommitDelta:     report.CommitDelta,
-			ClaudeAnalysis:  report.ClaudeAnalysis,
-			RCAPatterns:     report.RCAPatterns,
-			Recommendations: report.Recommendations,
-			HealthReport:    report.HealthReport,
-			InfraReport:     report.InfraReport,
-			NoiseReport:     report.NoiseReport,
-			CodeAnalysis:    report.CodeAnalysis,
+			ClusterName:      cfg.ClusterName,
+			Environment:      cfg.Environment,
+			MustGatherPath:   cfg.MustGatherPath,
+			Operator:         op.PackageName,
+			Namespace:        op.Namespace,
+			OperatorState:    op,
+			InstalledBundle:  report.InstalledBundle,
+			TargetBundle:     report.TargetBundle,
+			CommitDelta:      report.CommitDelta,
+			ClaudeAnalysis:   report.ClaudeAnalysis,
+			RCAPatterns:      report.RCAPatterns,
+			Recommendations:  report.Recommendations,
+			HealthReport:     report.HealthReport,
+			InfraReport:      report.InfraReport,
+			NoiseReport:      report.NoiseReport,
+			CodeAnalysis:     report.CodeAnalysis,
 			ADHDResult:       report.ADHDResult,
 			Session:          cfg.Session,
 			RepoCorrelation:  convertCorrelation(report.RepoCorrelation),
@@ -659,11 +659,11 @@ func summarizeReport(report FaultReport) string {
 	return "Analysis complete"
 }
 
-func truncateStr(s string, max int) string {
-	if len(s) <= max {
+func truncateStr(s string, maxLen int) string {
+	if len(s) <= maxLen {
 		return s
 	}
-	return s[:max-3] + "..."
+	return s[:maxLen-3] + "..."
 }
 
 // findBundleImageForCSV searches catalog for a bundle whose CSV name matches.

@@ -21,7 +21,7 @@ func (s *MetadataStore) RecordHypotheses(runID int64, hypotheses []HypothesisRec
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	stmt, err := tx.Prepare(`INSERT INTO hypotheses
 		(run_id, frame_id, hypothesis_text, score_total, was_trap, was_confirmed, operator, cluster_name)
@@ -83,12 +83,12 @@ func (s *MetadataStore) GetBoostFactors(operator string) (map[string]float64, er
 
 // GetFrameStats returns per-frame hypothesis statistics.
 type FrameStats struct {
-	FrameID       string
-	Total         int
-	Confirmed     int
-	Rejected      int
-	TrapCount     int
-	AvgScore      float64
+	FrameID   string
+	Total     int
+	Confirmed int
+	Rejected  int
+	TrapCount int
+	AvgScore  float64
 }
 
 // GetFrameStatsForOperator returns frame-level stats for an operator.

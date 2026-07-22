@@ -296,7 +296,7 @@ func isFaulty(ctx context.Context, op *OperatorState, mustGatherRoot string) boo
 }
 
 // buildFailureReason constructs a human-readable failure reason with code-level details.
-func buildFailureReason(ctx context.Context, op *OperatorState, mustGatherRoot string) string {
+func buildFailureReason(_ context.Context, op *OperatorState, _ string) string {
 	reasons := []string{}
 
 	// Check for catalog health issues first

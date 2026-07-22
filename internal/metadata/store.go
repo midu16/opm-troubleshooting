@@ -7,13 +7,13 @@ import (
 	"os"
 	"path/filepath"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3" // sqlite3 driver registration
 
 	"github.com/midu16/opm-troubleshooting/internal/session"
 )
 
 // MetadataStore wraps a SQLite database for persistent troubleshooting metadata.
-type MetadataStore struct {
+type MetadataStore struct { //nolint:revive // widely used name
 	db      *sql.DB
 	baseDir string
 }

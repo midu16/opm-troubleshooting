@@ -37,8 +37,8 @@ const (
 	OperatorOCloudManager       OperatorID = "O_CLOUD_MANAGER"
 	OperatorCephCSI             OperatorID = "CEPHCSI"
 	OperatorMCG                 OperatorID = "MCG"
-	OperatorOCSClient             OperatorID = "OCS_CLIENT"
-	OperatorOCS                   OperatorID = "OCS"
+	OperatorOCSClient           OperatorID = "OCS_CLIENT"
+	OperatorOCS                 OperatorID = "OCS"
 	OperatorODFCSIAddons        OperatorID = "ODF_CSI_ADDONS"
 	OperatorODFDependencies     OperatorID = "ODF_DEPENDENCIES"
 	OperatorODFExternalSnapshot OperatorID = "ODF_EXTERNAL_SNAPSHOT"
@@ -254,26 +254,26 @@ func TALM() Profile {
 
 func LifecycleAgent() Profile {
 	return Profile{
-		ID:              OperatorLifecycleAgent,
-		Category:        CategoryLifecycle,
-		PackageName:     "lifecycle-agent",
-		DisplayName:     "Lifecycle Agent",
-		DefaultNS:       "openshift-lifecycle-agent",
-		LogPatterns:     []string{"lifecycle-agent", "image-based upgrade", "reboot", "Reconciler error"},
-		CRKinds:         []string{"ImageBasedUpgrade", "LCAUpgrade"},
+		ID:          OperatorLifecycleAgent,
+		Category:    CategoryLifecycle,
+		PackageName: "lifecycle-agent",
+		DisplayName: "Lifecycle Agent",
+		DefaultNS:   "openshift-lifecycle-agent",
+		LogPatterns: []string{"lifecycle-agent", "image-based upgrade", "reboot", "Reconciler error"},
+		CRKinds:     []string{"ImageBasedUpgrade", "LCAUpgrade"},
 	}
 }
 
 func GitOps() Profile {
 	return Profile{
-		ID:              OperatorGitOps,
-		Category:        CategoryGitOps,
-		PackageName:     "openshift-gitops-operator",
-		DisplayName:     "OpenShift GitOps",
-		DefaultNS:       "openshift-operators",
-		AltNamespaces:   []string{"openshift-gitops"},
-		LogPatterns:     []string{"ArgoCD", "Application", "sync failed", "Reconciler error"},
-		CRKinds:         []string{"ArgoCD", "Application", "AppProject"},
+		ID:            OperatorGitOps,
+		Category:      CategoryGitOps,
+		PackageName:   "openshift-gitops-operator",
+		DisplayName:   "OpenShift GitOps",
+		DefaultNS:     "openshift-operators",
+		AltNamespaces: []string{"openshift-gitops"},
+		LogPatterns:   []string{"ArgoCD", "Application", "sync failed", "Reconciler error"},
+		CRKinds:       []string{"ArgoCD", "Application", "AppProject"},
 	}
 }
 
@@ -296,61 +296,61 @@ func ClusterLogging() Profile {
 
 func NMState() Profile {
 	return Profile{
-		ID:              OperatorNMState,
-		Category:        CategoryNetworking,
-		PackageName:     "kubernetes-nmstate-operator",
-		DisplayName:     "Kubernetes NMState Operator",
-		DefaultNS:       "openshift-nmstate",
-		LogPatterns:     []string{"NodeNetworkConfigurationPolicy", "nmstate", "Reconciler error"},
-		CRKinds:         []string{"NodeNetworkConfigurationPolicy", "NMState"},
+		ID:          OperatorNMState,
+		Category:    CategoryNetworking,
+		PackageName: "kubernetes-nmstate-operator",
+		DisplayName: "Kubernetes NMState Operator",
+		DefaultNS:   "openshift-nmstate",
+		LogPatterns: []string{"NodeNetworkConfigurationPolicy", "nmstate", "Reconciler error"},
+		CRKinds:     []string{"NodeNetworkConfigurationPolicy", "NMState"},
 	}
 }
 
 func MetalLB() Profile {
 	return Profile{
-		ID:              OperatorMetalLB,
-		Category:        CategoryNetworking,
-		PackageName:     "metallb-operator",
-		DisplayName:     "MetalLB Operator",
-		DefaultNS:       "openshift-metallb",
-		LogPatterns:     []string{"MetalLB", "BGP", "L2Advertisement", "IPAddressPool", "Reconciler error"},
-		CRKinds:         []string{"MetalLB", "BGPAdvertisement", "IPAddressPool", "L2Advertisement"},
+		ID:          OperatorMetalLB,
+		Category:    CategoryNetworking,
+		PackageName: "metallb-operator",
+		DisplayName: "MetalLB Operator",
+		DefaultNS:   "openshift-metallb",
+		LogPatterns: []string{"MetalLB", "BGP", "L2Advertisement", "IPAddressPool", "Reconciler error"},
+		CRKinds:     []string{"MetalLB", "BGPAdvertisement", "IPAddressPool", "L2Advertisement"},
 	}
 }
 
 func SRIOV() Profile {
 	return Profile{
-		ID:              OperatorSRIOV,
-		Category:        CategoryNetworking,
-		PackageName:     "sriov-network-operator",
-		DisplayName:     "SR-IOV Network Operator",
-		DefaultNS:       "openshift-sriov-network-operator",
-		LogPatterns:     []string{"SriovNetworkNodePolicy", "SriovNetwork", "VF", "Reconciler error"},
-		CRKinds:         []string{"SriovNetworkNodePolicy", "SriovNetwork", "SriovOperatorConfig"},
+		ID:          OperatorSRIOV,
+		Category:    CategoryNetworking,
+		PackageName: "sriov-network-operator",
+		DisplayName: "SR-IOV Network Operator",
+		DefaultNS:   "openshift-sriov-network-operator",
+		LogPatterns: []string{"SriovNetworkNodePolicy", "SriovNetwork", "VF", "Reconciler error"},
+		CRKinds:     []string{"SriovNetworkNodePolicy", "SriovNetwork", "SriovOperatorConfig"},
 	}
 }
 
 func PTP() Profile {
 	return Profile{
-		ID:              OperatorPTP,
-		Category:        CategoryNetworking,
-		PackageName:     "ptp-operator",
-		DisplayName:     "PTP Operator",
-		DefaultNS:       "openshift-ptp",
-		LogPatterns:     []string{"PtpConfig", "linuxptp", "phc", "clock sync", "Reconciler error"},
-		CRKinds:         []string{"PtpConfig", "PtpOperatorConfig"},
+		ID:          OperatorPTP,
+		Category:    CategoryNetworking,
+		PackageName: "ptp-operator",
+		DisplayName: "PTP Operator",
+		DefaultNS:   "openshift-ptp",
+		LogPatterns: []string{"PtpConfig", "linuxptp", "phc", "clock sync", "Reconciler error"},
+		CRKinds:     []string{"PtpConfig", "PtpOperatorConfig"},
 	}
 }
 
 func NUMAResources() Profile {
 	return Profile{
-		ID:              OperatorNUMAResources,
-		Category:        CategoryNetworking,
-		PackageName:     "numaresources-operator",
-		DisplayName:     "NUMA Resources Operator",
-		DefaultNS:       "openshift-numaresources",
-		LogPatterns:     []string{"NUMAResourcesOperator", "NUMAResourcesScheduler", "topology", "Reconciler error"},
-		CRKinds:         []string{"NUMAResourcesOperator", "NUMAResourcesScheduler", "TopologyAwareResource"},
+		ID:          OperatorNUMAResources,
+		Category:    CategoryNetworking,
+		PackageName: "numaresources-operator",
+		DisplayName: "NUMA Resources Operator",
+		DefaultNS:   "openshift-numaresources",
+		LogPatterns: []string{"NUMAResourcesOperator", "NUMAResourcesScheduler", "topology", "Reconciler error"},
+		CRKinds:     []string{"NUMAResourcesOperator", "NUMAResourcesScheduler", "TopologyAwareResource"},
 	}
 }
 
@@ -370,26 +370,26 @@ func IDMS() Profile {
 
 func OCloudManager() Profile {
 	return Profile{
-		ID:              OperatorOCloudManager,
-		Category:        CategoryConfig,
-		PackageName:     "o-cloud-manager",
-		DisplayName:     "O-Cloud Manager",
-		DefaultNS:       "openshift-o-cloud-manager",
-		LogPatterns:     []string{"o-cloud-manager", "Reconciler error"},
-		CRKinds:         []string{"OCloudManager"},
+		ID:          OperatorOCloudManager,
+		Category:    CategoryConfig,
+		PackageName: "o-cloud-manager",
+		DisplayName: "O-Cloud Manager",
+		DefaultNS:   "openshift-o-cloud-manager",
+		LogPatterns: []string{"o-cloud-manager", "Reconciler error"},
+		CRKinds:     []string{"OCloudManager"},
 	}
 }
 
 func CertManager() Profile {
 	return Profile{
-		ID:              OperatorCertManager,
-		Category:        CategorySecurity,
-		PackageName:     "openshift-cert-manager-operator",
-		DisplayName:     "OpenShift Cert Manager Operator",
-		DefaultNS:       "openshift-cert-manager-operator",
-		AltNamespaces:   []string{"cert-manager"},
-		LogPatterns:     []string{"cert-manager", "Certificate", "Issuer", "ACME", "Reconciler error"},
-		CRKinds:         []string{"CertManager", "Certificate", "ClusterIssuer", "Issuer"},
+		ID:            OperatorCertManager,
+		Category:      CategorySecurity,
+		PackageName:   "openshift-cert-manager-operator",
+		DisplayName:   "OpenShift Cert Manager Operator",
+		DefaultNS:     "openshift-cert-manager-operator",
+		AltNamespaces: []string{"cert-manager"},
+		LogPatterns:   []string{"cert-manager", "Certificate", "Issuer", "ACME", "Reconciler error"},
+		CRKinds:       []string{"CertManager", "Certificate", "ClusterIssuer", "Issuer"},
 	}
 }
 
@@ -397,26 +397,26 @@ func CertManager() Profile {
 
 func LocalStorage() Profile {
 	return Profile{
-		ID:              OperatorLocalStorage,
-		Category:        CategoryStorage,
-		PackageName:     "local-storage-operator",
-		DisplayName:     "Local Storage Operator",
-		DefaultNS:       "openshift-local-storage",
-		LogPatterns:     []string{"LocalVolume", "LocalVolumeDiscovery", "discover", "Reconciler error"},
-		CRKinds:         []string{"LocalVolume", "LocalVolumeDiscovery", "LocalVolumeSet"},
+		ID:          OperatorLocalStorage,
+		Category:    CategoryStorage,
+		PackageName: "local-storage-operator",
+		DisplayName: "Local Storage Operator",
+		DefaultNS:   "openshift-local-storage",
+		LogPatterns: []string{"LocalVolume", "LocalVolumeDiscovery", "discover", "Reconciler error"},
+		CRKinds:     []string{"LocalVolume", "LocalVolumeDiscovery", "LocalVolumeSet"},
 	}
 }
 
 func LVMS() Profile {
 	return Profile{
-		ID:              OperatorLVMS,
-		Category:        CategoryStorage,
-		PackageName:     "lvms-operator",
-		DisplayName:     "LVM Storage Operator",
-		DefaultNS:       "openshift-storage",
-		AltNamespaces:   []string{"openshift-lvm-storage"},
-		LogPatterns:     []string{"LVMCluster", "LogicalVolume", "thin pool", "Reconciler error"},
-		CRKinds:         []string{"LVMCluster", "LVMVolumeGroup", "LogicalVolume"},
+		ID:            OperatorLVMS,
+		Category:      CategoryStorage,
+		PackageName:   "lvms-operator",
+		DisplayName:   "LVM Storage Operator",
+		DefaultNS:     "openshift-storage",
+		AltNamespaces: []string{"openshift-lvm-storage"},
+		LogPatterns:   []string{"LVMCluster", "LogicalVolume", "thin pool", "Reconciler error"},
+		CRKinds:       []string{"LVMCluster", "LVMVolumeGroup", "LogicalVolume"},
 	}
 }
 
@@ -471,13 +471,13 @@ func odfProfile(id OperatorID, pkg, display string, crKinds []string) Profile {
 		crKinds = []string{"StorageCluster"}
 	}
 	return Profile{
-		ID:              id,
-		Category:        CategoryODF,
-		PackageName:     pkg,
-		DisplayName:     display,
-		DefaultNS:       "openshift-storage",
-		LogPatterns:     []string{"StorageCluster", "CephCluster", "NooBaa", "rook", "ceph", "Reconciler error"},
-		CRKinds:         crKinds,
+		ID:          id,
+		Category:    CategoryODF,
+		PackageName: pkg,
+		DisplayName: display,
+		DefaultNS:   "openshift-storage",
+		LogPatterns: []string{"StorageCluster", "CephCluster", "NooBaa", "rook", "ceph", "Reconciler error"},
+		CRKinds:     crKinds,
 	}
 }
 

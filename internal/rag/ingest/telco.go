@@ -90,7 +90,7 @@ func cloneOrUpdateTelco(ctx context.Context, cfg *rag.Config, telcoDir string) e
 
 	// Clone fresh.
 	fmt.Fprintf(os.Stderr, "  telco-reference: cloning %s ...\n", telcoRepoBranch)
-	if err := os.MkdirAll(filepath.Dir(telcoDir), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(telcoDir), 0o755); err != nil {
 		return err
 	}
 	cmdCtx, cancel := context.WithTimeout(ctx, timeout)

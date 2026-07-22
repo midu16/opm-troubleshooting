@@ -12,9 +12,9 @@ import (
 
 // InstallPlanStep represents a single resource in an InstallPlan.
 type InstallPlanStep struct {
-	Resolving string                 `yaml:"resolving"`
+	Resolving string                  `yaml:"resolving"`
 	Resource  InstallPlanStepResource `yaml:"resource"`
-	Status    string                 `yaml:"status"` // Unknown, Present, Created, NotPresent
+	Status    string                  `yaml:"status"` // Unknown, Present, Created, NotPresent
 }
 
 // InstallPlanStepResource describes the resource being installed.
@@ -27,15 +27,15 @@ type InstallPlanStepResource struct {
 
 // InstallPlanStatus represents the status section of an InstallPlan.
 type InstallPlanStatus struct {
-	Phase      string                   `yaml:"phase"`      // Planning, RequiresApproval, Installing, Complete, Failed
-	Conditions []InstallPlanCondition   `yaml:"conditions"`
-	Plan       []InstallPlanStep        `yaml:"plan"`
+	Phase      string                 `yaml:"phase"` // Planning, RequiresApproval, Installing, Complete, Failed
+	Conditions []InstallPlanCondition `yaml:"conditions"`
+	Plan       []InstallPlanStep      `yaml:"plan"`
 }
 
 // InstallPlanCondition represents a condition in the InstallPlan status.
 type InstallPlanCondition struct {
-	Type    string `yaml:"type"`    // Installed
-	Status  string `yaml:"status"`  // True, False
+	Type    string `yaml:"type"`   // Installed
+	Status  string `yaml:"status"` // True, False
 	Message string `yaml:"message"`
 	Reason  string `yaml:"reason"`
 }
@@ -68,12 +68,12 @@ type InstallPlanRef struct {
 
 // RootCauseDetail contains specific details about missing dependencies.
 type RootCauseDetail struct {
-	MissingCRDs       []string // CRD names that are required but not present
-	MissingAPIs       []string // API versions required but not available
-	UnknownResources  []string // Resources with status "Unknown"
+	MissingCRDs         []string // CRD names that are required but not present
+	MissingAPIs         []string // API versions required but not available
+	UnknownResources    []string // Resources with status "Unknown"
 	NotPresentResources []string // Resources with status "NotPresent"
-	PodErrors         []string // Errors from operator pod logs
-	RawFailureMessage string   // Raw failure message from conditions
+	PodErrors           []string // Errors from operator pod logs
+	RawFailureMessage   string   // Raw failure message from conditions
 }
 
 // ParseInstallPlan reads and parses an InstallPlan YAML file.
@@ -114,11 +114,11 @@ func FindInstallPlan(mustGatherRoot, namespace, installPlanName string) (string,
 // ExtractRootCause analyzes an InstallPlan and extracts detailed root cause information.
 func ExtractRootCause(plan *InstallPlan) *RootCauseDetail {
 	detail := &RootCauseDetail{
-		MissingCRDs:       make([]string, 0),
-		MissingAPIs:       make([]string, 0),
-		UnknownResources:  make([]string, 0),
+		MissingCRDs:         make([]string, 0),
+		MissingAPIs:         make([]string, 0),
+		UnknownResources:    make([]string, 0),
 		NotPresentResources: make([]string, 0),
-		PodErrors:         make([]string, 0),
+		PodErrors:           make([]string, 0),
 	}
 
 	// Check for failure conditions

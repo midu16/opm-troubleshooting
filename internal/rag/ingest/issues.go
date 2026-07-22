@@ -96,10 +96,11 @@ var knownIssuesDB = []knownIssue{
 		FixVersion:  "4.22.4",
 		OCPVersions: "4.22.0-4.22.3",
 	},
+	//nolint:misspell // NTO = Node Tuning Operator
 	{
 		IssueID:     "KNOWN-NTO-001",
 		Operator:    "cluster-node-tuning-operator",
-		Summary:     "PerformanceProfile does not apply hugepages configuration on real-time kernel nodes when NUMA topology changes after a BIOS update. The NTO logs 'topology mismatch' warnings.",
+		Summary:     "PerformanceProfile does not apply hugepages configuration on real-time kernel nodes when NUMA topology changes after a BIOS update. The NTO logs 'topology mismatch' warnings.", //nolint:misspell // NTO = Node Tuning Operator
 		Workaround:  "Delete and recreate the PerformanceProfile after the BIOS update. Verify NUMA topology matches the profile using 'lscpu' and 'numactl --hardware' on the affected node.",
 		FixVersion:  "4.22.3",
 		OCPVersions: "4.22.0-4.22.2",

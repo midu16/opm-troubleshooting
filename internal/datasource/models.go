@@ -71,11 +71,11 @@ type CSVState struct {
 
 // InstallPlanState represents an OLM InstallPlan snapshot.
 type InstallPlanState struct {
-	Name      string
-	Namespace string
-	Phase     string
-	Approved  bool
-	Failed    bool
+	Name       string
+	Namespace  string
+	Phase      string
+	Approved   bool
+	Failed     bool
 	Conditions []Condition
 	Steps      []InstallPlanStep
 }
@@ -147,12 +147,12 @@ type EtcdMemberState struct {
 
 // ClusterOperatorState represents an OpenShift ClusterOperator status.
 type ClusterOperatorState struct {
-	Name       string
-	Available  bool
+	Name        string
+	Available   bool
 	Progressing bool
-	Degraded   bool
-	Version    string
-	Conditions []Condition
+	Degraded    bool
+	Version     string
+	Conditions  []Condition
 }
 
 // MCPState represents a MachineConfigPool status.
@@ -191,12 +191,12 @@ type CertificateState struct {
 
 // PVState represents a PersistentVolume snapshot.
 type PVState struct {
-	Name            string
-	Capacity        string
-	Phase           string // Bound, Available, Released, Failed, Pending
-	StorageClass    string
-	ReclaimPolicy   string
-	ClaimRef        string
+	Name          string
+	Capacity      string
+	Phase         string // Bound, Available, Released, Failed, Pending
+	StorageClass  string
+	ReclaimPolicy string
+	ClaimRef      string
 }
 
 // PVCState represents a PersistentVolumeClaim snapshot.
@@ -233,21 +233,21 @@ type NetworkRange struct {
 
 // ClusterVersionState represents the cluster version and upgrade status.
 type ClusterVersionState struct {
-	Version      string
-	Channel      string
-	ClusterID    string
-	Available    bool
-	Progressing  bool
-	Failing      bool
-	Conditions   []Condition
-	History      []UpdateHistory
+	Version     string
+	Channel     string
+	ClusterID   string
+	Available   bool
+	Progressing bool
+	Failing     bool
+	Conditions  []Condition
+	History     []UpdateHistory
 }
 
 // UpdateHistory records a cluster version update event.
 type UpdateHistory struct {
-	Version    string
-	State      string // Completed, Partial
-	StartedAt  time.Time
+	Version     string
+	State       string // Completed, Partial
+	StartedAt   time.Time
 	CompletedAt time.Time
 }
 

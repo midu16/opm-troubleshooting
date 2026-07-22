@@ -23,15 +23,15 @@ type HistoryEntry struct {
 
 // Record persists analysis context across redeployments.
 type Record struct {
-	ClusterID       string         `json:"cluster_id"`
-	ClusterName     string         `json:"cluster_name"`
-	OperatorPackage string         `json:"operator_package"`
-	Environment     string         `json:"environment"`
-	RedeploymentCount int          `json:"redeployment_count"`
-	FirstSeen       time.Time      `json:"first_seen"`
-	LastSeen        time.Time      `json:"last_seen"`
-	KnownCosmetic   []string       `json:"known_cosmetic,omitempty"`
-	History         []HistoryEntry `json:"history"`
+	ClusterID         string         `json:"cluster_id"`
+	ClusterName       string         `json:"cluster_name"`
+	OperatorPackage   string         `json:"operator_package"`
+	Environment       string         `json:"environment"`
+	RedeploymentCount int            `json:"redeployment_count"`
+	FirstSeen         time.Time      `json:"first_seen"`
+	LastSeen          time.Time      `json:"last_seen"`
+	KnownCosmetic     []string       `json:"known_cosmetic,omitempty"`
+	History           []HistoryEntry `json:"history"`
 }
 
 // Store manages persistent session files.

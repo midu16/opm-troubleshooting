@@ -22,6 +22,10 @@ type result struct {
 }
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	catalogRef := envOr("CATALOG", "registry.redhat.io/redhat/redhat-operator-index:v4.22")
 	listPath := envOr("LIST", testfixture.OperatorsPath())
 	timeout := 20 * time.Minute
@@ -29,7 +33,7 @@ func main() {
 	operators, err := testfixture.LoadOperatorsFromPath(listPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "read list: %v\n", err)
-		os.Exit(2)
+		return 2
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -39,7 +43,7 @@ func main() {
 	declCfg, err := catalog.RenderCatalog(ctx, catalogRef)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "render catalog: %v\n", err)
-		os.Exit(2)
+		return 2
 	}
 	fmt.Fprintf(os.Stderr, "Catalog rendered. Checking %d operators ...\n", len(operators))
 
@@ -58,8 +62,9 @@ func main() {
 	}
 	fmt.Fprintf(os.Stderr, "\nTotal: %d OK, %d PARTIAL (missing commit or url), %d FAIL\n", ok, partial, fail)
 	if fail > 0 {
-		os.Exit(1)
+		return 1
 	}
+	return 0
 }
 
 func checkOperator(ctx context.Context, cfg *declcfg.DeclarativeConfig, pkg, ch string) result {

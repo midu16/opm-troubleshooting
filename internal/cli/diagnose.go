@@ -226,9 +226,9 @@ func runMustGatherDiagnosis(ctx context.Context, cfg *diagnoseConfig) error {
 		enableLearning: cfg.enableLearning,
 		enableRepoCorr: cfg.enableRepoCorr,
 		githubToken:    cfg.githubToken,
-		ragEnabled:    cfg.ragEnabled,
-		ragConfigPath: cfg.ragConfigPath,
-		ragDataDir:    cfg.ragDataDir,
+		ragEnabled:     cfg.ragEnabled,
+		ragConfigPath:  cfg.ragConfigPath,
+		ragDataDir:     cfg.ragDataDir,
 	}
 	return runMustGatherAnalysis(ctx, mgCfg)
 }
@@ -435,7 +435,7 @@ func runDataSourceAnalysis(ctx context.Context, src datasource.ClusterDataSource
 		doc := rca.GenerateDocument(rcaInput)
 
 		if cfg.rcaFile != "" {
-			if err := os.WriteFile(cfg.rcaFile, []byte(doc.Markdown), 0644); err != nil {
+			if err := os.WriteFile(cfg.rcaFile, []byte(doc.Markdown), 0o600); err != nil {
 				return &CLIError{Code: exitOperation, Err: fmt.Errorf("write RCA file: %w", err)}
 			}
 			fmt.Fprintf(os.Stderr, "RCA report written to %s\n", cfg.rcaFile)

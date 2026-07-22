@@ -52,8 +52,8 @@ type SearchResult struct {
 }
 
 type FreshnessStatus struct {
-	Fresh         bool   `json:"fresh"`
-	IngestedAt    string `json:"ingested_at"`
+	Fresh         bool              `json:"fresh"`
+	IngestedAt    string            `json:"ingested_at"`
 	IngestCommits map[string]string `json:"ingest_commits"`
-	Message       string `json:"message"`
+	Message       string            `json:"message"`
 }
