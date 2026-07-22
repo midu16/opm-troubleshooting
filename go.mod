@@ -8,7 +8,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.48
 	github.com/operator-framework/operator-registry v1.72.0
 	github.com/philippgille/chromem-go v0.7.0
-	golang.org/x/sync v0.21.0
+	golang.org/x/sync v0.22.0
 	k8s.io/apimachinery v0.36.2
 	k8s.io/client-go v0.36.2
 	sigs.k8s.io/yaml v1.6.0
