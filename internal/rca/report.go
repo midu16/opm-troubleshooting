@@ -698,25 +698,314 @@ func writeRootCause(b *strings.Builder, input ReportInput) {
 	}
 }
 
-func writeRecommendations(b *strings.Builder, input ReportInput) {
-	b.WriteString("## Recommended Actions\n\n")
-	step := 1
+type recommendationBlock struct {
+	priority   string
+	title      string
+	action     string
+	rationale  string
+	evidence   []string
+	docRef     string
+	codeRef    string
+	knownIssue string
+	dimIDs     []string
+}
 
-	if input.HealthReport != nil {
-		for _, dim := range input.HealthReport.Dimensions {
-			if dim.Status == healthcheck.StatusFail && dim.Recommendation != "" {
-				b.WriteString(fmt.Sprintf("%d. **[%s]** %s\n", step, dim.Name, dim.Recommendation))
-				step++
+func buildRecommendationTitle(dim healthcheck.DimensionResult) string {
+	summary := dim.Summary
+	switch dim.ID {
+	case healthcheck.DimNodeHealth:
+		return "Recover " + summary
+	case healthcheck.DimEtcdHealth:
+		return "Restore etcd Cluster Health"
+	case healthcheck.DimAPIServerHealth:
+		return "Restore API Server Availability"
+	case healthcheck.DimClusterVersion:
+		return "Fix " + summary
+	case healthcheck.DimAuthOperator:
+		return "Restore Authentication Operator"
+	case healthcheck.DimNetworkOperator, healthcheck.DimDNSHealth, healthcheck.DimIngressHealth:
+		return "Stabilize " + dim.Name
+	case healthcheck.DimMCPHealth:
+		return "Complete MachineConfigPool Update"
+	case healthcheck.DimPodHealth:
+		count := 0
+		for _, e := range dim.Evidence {
+			if e != "" {
+				count++
+			}
+		}
+		if count > 0 {
+			return fmt.Sprintf("Investigate Unhealthy Pods (%d not ready)", count)
+		}
+		return "Investigate Unhealthy Pods"
+	case healthcheck.DimContainerRestarts:
+		return "Diagnose Crash-Looping Containers"
+	case healthcheck.DimScheduling:
+		return "Resolve Pod Scheduling Failures"
+	case healthcheck.DimImagePull:
+		return "Fix Image Pull Failures"
+	case healthcheck.DimSubscription:
+		return "Fix OLM Subscription Resolution"
+	case healthcheck.DimCatalogSource:
+		return "Restore CatalogSource Connectivity"
+	case healthcheck.DimCSVPhase:
+		return "Fix ClusterServiceVersion Phase"
+	case healthcheck.DimPVHealth:
+		return "Recover PersistentVolume Health"
+	case healthcheck.DimStorageOperator:
+		return "Restore Storage Operator"
+	case healthcheck.DimBackupRestore:
+		return "Fix Backup/Restore Operator"
+	default:
+		return "Resolve " + dim.Name
+	}
+}
+
+var infraCascadeAbsorbs = map[healthcheck.DimensionID][]healthcheck.DimensionID{
+	healthcheck.DimNodeHealth:     {healthcheck.DimEtcdHealth, healthcheck.DimClusterVersion, healthcheck.DimAuthOperator, healthcheck.DimMCPHealth},
+	healthcheck.DimEtcdHealth:     {healthcheck.DimClusterVersion},
+	healthcheck.DimClusterVersion: {healthcheck.DimAuthOperator},
+}
+
+func groupInfraFailures(dims []healthcheck.DimensionResult) (primary []healthcheck.DimensionResult, absorbed map[healthcheck.DimensionID]healthcheck.DimensionID) {
+	absorbed = make(map[healthcheck.DimensionID]healthcheck.DimensionID)
+	failedSet := make(map[healthcheck.DimensionID]bool)
+	for _, d := range dims {
+		if d.Status == healthcheck.StatusFail || d.Status == healthcheck.StatusWarn {
+			failedSet[d.ID] = true
+		}
+	}
+	for parentID, children := range infraCascadeAbsorbs {
+		if !failedSet[parentID] {
+			continue
+		}
+		for _, childID := range children {
+			if failedSet[childID] && absorbed[childID] == "" {
+				absorbed[childID] = parentID
 			}
 		}
 	}
+	for _, d := range dims {
+		if (d.Status == healthcheck.StatusFail || d.Status == healthcheck.StatusWarn) && absorbed[d.ID] == "" {
+			primary = append(primary, d)
+		}
+	}
+	return primary, absorbed
+}
 
-	if input.InfraReport != nil {
-		for _, dim := range input.InfraReport.Dimensions {
-			if dim.Status == healthcheck.StatusFail && dim.Recommendation != "" {
-				b.WriteString(fmt.Sprintf("%d. **[%s]** %s\n", step, dim.Name, dim.Recommendation))
-				step++
+func findSymptomEvidence(dimID healthcheck.DimensionID, input ReportInput) *RAGSymptomEvidence {
+	if input.RAGContext == nil {
+		return nil
+	}
+	for i := range input.RAGContext.SymptomAnalysis {
+		if input.RAGContext.SymptomAnalysis[i].DimensionID == string(dimID) {
+			return &input.RAGContext.SymptomAnalysis[i]
+		}
+	}
+	return nil
+}
+
+func buildRecommendationContext(dim healthcheck.DimensionResult, absorbedDims []healthcheck.DimensionResult, input ReportInput) recommendationBlock {
+	block := recommendationBlock{
+		priority: "High",
+		title:    buildRecommendationTitle(dim),
+		action:   dim.Recommendation,
+		dimIDs:   []string{string(dim.ID)},
+	}
+
+	if dim.Severity == healthcheck.SeverityCritical {
+		block.priority = "Critical"
+	} else if dim.Severity == healthcheck.SeverityWarning {
+		block.priority = "Medium"
+	}
+
+	classification := ""
+	if input.RAGContext != nil {
+		classification = input.RAGContext.IssueClassification
+	}
+	block.rationale = dimensionSignificance(dim, classification)
+
+	for _, e := range dim.Evidence {
+		if e != "" {
+			block.evidence = append(block.evidence, dim.Name+": "+e)
+		}
+	}
+
+	for _, ad := range absorbedDims {
+		block.dimIDs = append(block.dimIDs, string(ad.ID))
+		for _, e := range ad.Evidence {
+			if e != "" {
+				ev := ad.Name + ": " + e
+				if len(ev) > 200 {
+					ev = ev[:200] + "..."
+				}
+				block.evidence = append(block.evidence, ev)
 			}
+		}
+		if ad.Recommendation != "" && ad.Recommendation != dim.Recommendation {
+			block.evidence = append(block.evidence, fmt.Sprintf("[%s action] %s", ad.Name, ad.Recommendation))
+		}
+	}
+
+	se := findSymptomEvidence(dim.ID, input)
+	if se == nil && len(absorbedDims) > 0 {
+		for _, ad := range absorbedDims {
+			se = findSymptomEvidence(ad.ID, input)
+			if se != nil {
+				break
+			}
+		}
+	}
+	if se != nil {
+		if len(se.DocMatches) > 0 {
+			best := se.DocMatches[0]
+			block.docRef = best.Title + " (" + best.Source + ")"
+		}
+		if len(se.CodeMatches) > 0 {
+			best := se.CodeMatches[0]
+			block.codeRef = best.Title + " in " + best.Source
+		}
+		if len(se.KnownIssues) > 0 {
+			ki := se.KnownIssues[0]
+			issue := ki.ID + ": " + ki.Summary
+			if ki.FixVersion != "" {
+				issue += " (fix: " + ki.FixVersion + ")"
+			}
+			block.knownIssue = issue
+		}
+	}
+
+	if block.action == "" {
+		block.action = "Investigate " + dim.Name + " — " + dim.Summary
+	}
+
+	return block
+}
+
+func writeRecommendationBlock(b *strings.Builder, step int, block recommendationBlock) {
+	b.WriteString(fmt.Sprintf("### %d. [%s] %s\n\n", step, block.priority, block.title))
+
+	b.WriteString(fmt.Sprintf("**Action:** %s\n\n", block.action))
+
+	if block.rationale != "" {
+		b.WriteString(fmt.Sprintf("**Why this matters:** %s\n\n", block.rationale))
+	}
+
+	if len(block.evidence) > 0 {
+		b.WriteString("**Supporting evidence:**\n\n")
+		maxEvidence := 5
+		for i, e := range block.evidence {
+			if i >= maxEvidence {
+				b.WriteString(fmt.Sprintf("- ... and %d more\n", len(block.evidence)-maxEvidence))
+				break
+			}
+			b.WriteString("- " + e + "\n")
+		}
+		b.WriteString("\n")
+	}
+
+	if block.docRef != "" {
+		b.WriteString(fmt.Sprintf("**Related documentation:** %s\n\n", block.docRef))
+	}
+
+	if block.codeRef != "" {
+		b.WriteString(fmt.Sprintf("**Relevant code:** `%s`\n\n", block.codeRef))
+	}
+
+	if block.knownIssue != "" {
+		b.WriteString(fmt.Sprintf("**Known issue:** %s\n\n", block.knownIssue))
+	}
+
+	b.WriteString("---\n\n")
+}
+
+func writeRecommendations(b *strings.Builder, input ReportInput) {
+	b.WriteString("## Recommended Actions\n\n")
+
+	hasRAG := input.RAGContext != nil && len(input.RAGContext.SymptomAnalysis) > 0
+
+	if !hasRAG {
+		writeRecommendationsSimple(b, input)
+		return
+	}
+
+	allFailed := collectFailedDims(input)
+	if len(allFailed) == 0 {
+		writeRecommendationsSimple(b, input)
+		return
+	}
+
+	infraDims := make([]healthcheck.DimensionResult, 0)
+	if input.InfraReport != nil {
+		for _, d := range input.InfraReport.Dimensions {
+			if d.Status == healthcheck.StatusFail || d.Status == healthcheck.StatusWarn {
+				infraDims = append(infraDims, d)
+			}
+		}
+	}
+	_, absorbed := groupInfraFailures(infraDims)
+
+	step := 1
+	rendered := make(map[healthcheck.DimensionID]bool)
+	maxBlocks := 8
+
+	sort.Slice(allFailed, func(i, j int) bool {
+		if allFailed[i].Severity == healthcheck.SeverityCritical && allFailed[j].Severity != healthcheck.SeverityCritical {
+			return true
+		}
+		if allFailed[i].Severity != healthcheck.SeverityCritical && allFailed[j].Severity == healthcheck.SeverityCritical {
+			return false
+		}
+		return allFailed[i].Name < allFailed[j].Name
+	})
+
+	for _, dim := range allFailed {
+		if step > maxBlocks {
+			break
+		}
+		if rendered[dim.ID] {
+			continue
+		}
+		if absorbed[dim.ID] != "" {
+			continue
+		}
+
+		var absorbedDims []healthcheck.DimensionResult
+		for _, ad := range allFailed {
+			if absorbed[ad.ID] == dim.ID {
+				absorbedDims = append(absorbedDims, ad)
+				rendered[ad.ID] = true
+			}
+		}
+
+		block := buildRecommendationContext(dim, absorbedDims, input)
+		writeRecommendationBlock(b, step, block)
+		rendered[dim.ID] = true
+		step++
+	}
+
+	coveredActions := make(map[string]bool)
+	for _, dim := range allFailed {
+		if dim.Recommendation != "" {
+			coveredActions[dim.Recommendation] = true
+		}
+	}
+	if input.RAGContext != nil {
+		for _, rs := range input.RAGContext.RemediationSteps {
+			if step > maxBlocks {
+				break
+			}
+			if coveredActions[rs.Action] {
+				continue
+			}
+			coveredActions[rs.Action] = true
+			b.WriteString(fmt.Sprintf("### %d. [%s] RAG Recommendation (confidence: %.0f%%)\n\n", step, rs.Priority, rs.Confidence*100))
+			b.WriteString(fmt.Sprintf("**Action:** %s\n\n", rs.Action))
+			if rs.Source != "" {
+				b.WriteString(fmt.Sprintf("**Source:** %s\n\n", rs.Source))
+			}
+			b.WriteString("---\n\n")
+			step++
 		}
 	}
 
@@ -739,6 +1028,69 @@ func writeRecommendations(b *strings.Builder, input ReportInput) {
 		}
 	}
 
+	if step == 1 {
+		b.WriteString("No immediate actions required. Continue monitoring.\n")
+	}
+	b.WriteString("\n")
+}
+
+func collectFailedDims(input ReportInput) []healthcheck.DimensionResult {
+	seen := make(map[healthcheck.DimensionID]bool)
+	var result []healthcheck.DimensionResult
+	if input.HealthReport != nil {
+		for _, d := range input.HealthReport.Dimensions {
+			if (d.Status == healthcheck.StatusFail || d.Status == healthcheck.StatusWarn) && !seen[d.ID] {
+				result = append(result, d)
+				seen[d.ID] = true
+			}
+		}
+	}
+	if input.InfraReport != nil {
+		for _, d := range input.InfraReport.Dimensions {
+			if (d.Status == healthcheck.StatusFail || d.Status == healthcheck.StatusWarn) && !seen[d.ID] {
+				result = append(result, d)
+				seen[d.ID] = true
+			}
+		}
+	}
+	return result
+}
+
+func writeRecommendationsSimple(b *strings.Builder, input ReportInput) {
+	step := 1
+	if input.HealthReport != nil {
+		for _, dim := range input.HealthReport.Dimensions {
+			if dim.Status == healthcheck.StatusFail && dim.Recommendation != "" {
+				b.WriteString(fmt.Sprintf("%d. **[%s]** %s\n", step, dim.Name, dim.Recommendation))
+				step++
+			}
+		}
+	}
+	if input.InfraReport != nil {
+		for _, dim := range input.InfraReport.Dimensions {
+			if dim.Status == healthcheck.StatusFail && dim.Recommendation != "" {
+				b.WriteString(fmt.Sprintf("%d. **[%s]** %s\n", step, dim.Name, dim.Recommendation))
+				step++
+			}
+		}
+	}
+	for _, rec := range input.Recommendations {
+		level := "Medium"
+		switch rec.Priority {
+		case 1:
+			level = "Critical"
+		case 2:
+			level = "High"
+		}
+		b.WriteString(fmt.Sprintf("%d. **[%s]** %s — %s\n", step, level, rec.Title, rec.Description))
+		step++
+	}
+	if input.ClaudeAnalysis != nil {
+		for _, action := range input.ClaudeAnalysis.RecommendedActions {
+			b.WriteString(fmt.Sprintf("%d. %s\n", step, action))
+			step++
+		}
+	}
 	if step == 1 {
 		b.WriteString("No immediate actions required. Continue monitoring.\n")
 	}
