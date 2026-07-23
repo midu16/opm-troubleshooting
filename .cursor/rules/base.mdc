@@ -1,0 +1,35 @@
+---
+description: "OPM Troubleshooting project context and conventions"
+alwaysApply: true
+---
+
+# OPM Troubleshooting
+
+Go-based OLM operator troubleshooting toolkit for OpenShift. Pure Go replacement for `opm render` + `jq` + `skopeo inspect`.
+
+## Stack
+
+- Go 1.26.3+, build tag `containers_image_openpgp` (no gpgme C dependency)
+- `operator-registry` for FBC rendering, `go-containerregistry` for bundle inspection
+- `chromem-go` vector store for RAG, `mcp-go` v0.56.0 for MCP server
+- `k8s.io/client-go` for live cluster mode, `go-sqlite3` for metadata persistence
+
+## Binaries (built to `bin/` via `make build`)
+
+- `catalog-bundle-inspect` — OLM catalog bundle inspector
+- `batch-validate` — batch operator validation
+- `telco-diagnose` — telco production diagnosis (27 operators)
+- `opm-diagnose` — unified diagnostics (live cluster + must-gather)
+- `ocp-rag-server` — MCP server exposing 8 RAG tools
+- `ocp-rag-ingest` / `ocp-rag-query` — RAG ingestion and query CLIs
+
+## Commands
+
+- `make build` — build all binaries
+- `make test` — run unit tests
+- `make lint` — run golangci-lint
+- `DOCKER_CONFIG=/path/to/config` — registry auth for private catalogs
+
+## MCP
+
+The `ocp-rag` MCP server provides 8 tools for OpenShift troubleshooting. Use `troubleshoot_operator` for broad diagnosis, then drill down with `search_docs`, `search_operator_code`, `search_known_issues`, etc.

@@ -1,0 +1,94 @@
+---
+description: "OLM operator troubleshooting workflows and diagnostic patterns for OpenShift. Use when debugging operator installations, subscriptions, channels, bundles, catalog issues, or telco operator health."
+alwaysApply: false
+---
+
+# OLM Troubleshooting Workflows
+
+Six diagnostic workflows for OpenShift operator troubleshooting. Each combines CLI tools with MCP RAG tools for comprehensive analysis.
+
+## 1. Bundle Metadata Analysis
+
+**When**: Missing commit SHA, repository URL, or version in bundle metadata.
+
+1. Run `./bin/catalog-bundle-inspect --catalog <image> --package <name> --json`
+2. Check image labels: `io.openshift.build.commit.id`, `org.opencontainers.image.revision`, `vcs-ref`
+3. If missing, check CSV annotations and `spec.links` for repository URLs
+4. Use `search_operator_code` MCP tool for code-level correlation
+5. Recommend specific `LABEL` additions for the operator's Dockerfile
+
+## 2. Channel Migration
+
+**When**: Comparing channels (e.g., `stable-4.21` to `stable-4.22`) or investigating upgrade failures.
+
+1. List channels: `./bin/catalog-bundle-inspect --catalog <image> --package <name>` (resolve mode)
+2. Inspect both channel heads with `--channel` flag and `--json`
+3. Compare versions, commits, and changelogs
+4. Use `troubleshoot_operator` MCP tool for known migration issues
+5. Check for breaking changes in commit messages between versions
+
+## 3. Catalog Quality Audit
+
+**When**: Validating catalog builds before release or assessing metadata quality.
+
+1. Run `CATALOG=<image> LIST=<file> ./bin/batch-validate`
+2. Classify: OK (complete), PARTIAL (missing metadata), FAIL (broken)
+3. For failures, run individual `catalog-bundle-inspect` for detailed errors
+4. Use `search_known_issues` MCP tool for known bugs per operator
+5. Prioritize: P0 (FAIL — blocks subscription), P1 (missing commit), P2 (missing URL)
+
+## 4. Subscription Troubleshooting
+
+**When**: OLM Subscription fails to install or upgrade.
+
+1. Extract catalog, package, channel from the Subscription YAML
+2. Verify channel exists with `catalog-bundle-inspect`
+3. If channel missing, list available channels and suggest the correct one
+4. Inspect channel head bundle for common issues (CRD compatibility, RBAC, dependencies)
+5. Use `troubleshoot_operator` MCP tool for cross-knowledge-base diagnosis
+6. Use `search_docs` MCP tool for relevant OCP documentation
+
+## 5. Version Resolution
+
+**When**: Finding which bundle version contains a specific commit or fix.
+
+1. List all channels for the package
+2. Inspect each channel head with `--json` to extract commit SHAs
+3. Match target commit against bundle commits
+4. If not found, check upstream repository for unreleased commits
+5. Report channel, version, and bundle image containing the commit
+
+## 6. Telco Diagnosis
+
+**When**: Diagnosing telco operator suite (27 OLM operators + IDMS) from must-gather data.
+
+1. Run `./bin/telco-diagnose --must-gather <path> --environment <env> --rca-file <output>`
+2. Review 20-dimension OLM health checks + 13 infrastructure dimensions
+3. Classify findings: REAL (action required) vs COSMETIC (noise from environment)
+4. Use `search_telco_configs` MCP tool for validated reference configurations
+5. Use `troubleshoot_operator` with symptoms for each failing operator
+6. The `--environment` flag (lab/production/disconnected/kvm) controls noise filtering
+
+**Telco operators**: OADP, TALM, lifecycle-agent, gitops, cluster-logging, nmstate, metallb, sriov, ptp, numa, local-storage, lvms, odf suite (11 packages), ACM, multicluster-engine, cert-manager, o-cloud-manager.
+
+## Output Format Convention
+
+```
+## Summary
+[1-2 sentence overview]
+
+## Analysis
+[Detailed findings with data]
+
+## Root Cause
+[Specific diagnosis with commit/code references]
+
+## Recommendations
+1. [Action with command or YAML snippet]
+2. [Action with command or YAML snippet]
+
+## References
+- [Commit URL]
+- [Documentation link]
+- [Known issue]
+```

@@ -45,9 +45,6 @@ debug
 debug.test
 *.pprof
 
-# Cursor / local tooling
-.cursor/
-
 # GoReleaser
 /dist/
 

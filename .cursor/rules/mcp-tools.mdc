@@ -1,0 +1,44 @@
+---
+description: "Guide for using OCP RAG MCP tools. Apply when the user asks about OpenShift operators, OCP documentation, telco configurations, known issues, errata, or operator troubleshooting."
+alwaysApply: false
+---
+
+# OCP RAG MCP Tools
+
+The `ocp-rag` MCP server provides 8 tools backed by a local vector store with 5 collections: `ocp_docs`, `operator_code`, `telco_configs`, `known_issues`, `manifests`.
+
+## Decision Tree
+
+1. **Broad diagnosis** — start here: `troubleshoot_operator(operator, symptoms?, ocp_version?)`
+   Fans out across all collections. Use when you don't know where the issue lies.
+
+2. **Documentation lookup**: `search_docs(query)`
+   OCP product docs — installation, configuration, troubleshooting procedures.
+
+3. **Source code search**: `search_operator_code(query, operator?)`
+   Operator Go source code — reconcile logic, error handling, controller implementation.
+
+4. **Reference configs**: `search_telco_configs(query)`
+   Validated telco-core and telco-RAN CR configurations from the telco-reference repo.
+
+5. **Bug search**: `search_known_issues(operator, ocp_version?)`
+   Known bugs and issues from Bugzilla/Jira. Filter by OCP version when possible.
+
+6. **Operator overview**: `get_operator_info(operator)`
+   Comprehensive summary: docs + known issues + configs. Use for unfamiliar operators.
+
+7. **Errata lookup**: `search_errata(ocp_version)`
+   Errata advisories for a specific OCP version.
+
+8. **Data refresh**: `update_rag()`
+   Re-ingest all sources (takes several minutes). Use when results seem stale.
+
+## Usage Patterns
+
+**Subscription failure**: `troubleshoot_operator(operator: "cluster-logging", symptoms: ["InstallPlan failed", "channel not found"])` then `search_docs("cluster-logging subscription channel migration")`
+
+**Code-level RCA**: `search_operator_code(query: "pod disruption budget reconciliation", operator: "cluster-etcd-operator")`
+
+**Telco deployment**: `search_telco_configs("single-node OpenShift performance profile")` then `search_known_issues(operator: "numaresources-operator", ocp_version: "4.22")`
+
+**Version research**: `search_errata(ocp_version: "4.22")` then `search_known_issues(operator: "sriov-network-operator", ocp_version: "4.22")`

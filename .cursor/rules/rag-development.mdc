@@ -1,0 +1,41 @@
+---
+description: "RAG system development conventions for the OCP RAG engine, MCP server, and vector store"
+globs: ["internal/rag/**/*.go", "cmd/ocp-rag-server/**/*.go", "cmd/ocp-rag-ingest/**/*.go", "cmd/ocp-rag-query/**/*.go", "rag-config.yaml"]
+alwaysApply: false
+---
+
+# RAG System Development
+
+## Architecture
+
+- `internal/rag/engine.go` — central `Engine` struct with `Troubleshoot()`, `DeepTroubleshoot()`, `SearchDocs()`, `SearchCode()`, `SearchTelcoConfigs()`, `SearchKnownIssues()`, `SearchManifests()`, `CheckFreshness()`
+- `internal/rag/store.go` — vector store wrapper around `chromem-go` with `AddDocuments()`, `Search()`, `SearchWithFilter()`, `KeywordSearch()`, `Reset()`
+- `internal/rag/mcp/server.go` — MCP server using `mark3labs/mcp-go` v0.56.0, stdio transport. `NewMCPServer(engine)` creates the server, `registerTools()` registers all 8 tools
+- `internal/rag/ingest/` — data ingestion pipeline: docs, Go source (via `go/ast`), YAML, markdown, issues
+- `internal/rag/embeddings.go` — embedding client (Ollama-compatible HTTP API)
+
+## Vector Store
+
+5 collections in `chromem-go`:
+
+| Collection | Content | Retrieval |
+|---|---|---|
+| `ocp_docs` | OCP product documentation | Hybrid (BM25 + vector) |
+| `operator_code` | Operator Go source code | Hybrid (BM25 + vector) |
+| `telco_configs` | Telco-reference validated CRs | Plain vector |
+| `known_issues` | Bugs from Bugzilla/Jira | Plain vector, version-aware |
+| `manifests` | Operator manifests and CRDs | Plain vector |
+
+## Configuration
+
+`rag-config.yaml` controls: `data_dir`, embedding URL/model, OCP versions, operator repos, retrieval params (top_k, similarity threshold), chunking (size, overlap), ingestion timeouts, secret filtering, freshness metadata.
+
+Override with env vars: `OCP_RAG_DATA_DIR`, `OCP_RAG_EMBEDDING_URL`, `OCP_RAG_EMBEDDING_MODEL`, `OCP_RAG_OCP_VERSION`.
+
+## Adding a New MCP Tool
+
+1. Add `mcp.NewTool("tool_name", mcp.WithDescription(...), mcp.WithString/Array(...))` in `registerTools()` in `internal/rag/mcp/server.go`
+2. Implement handler method on `mcpServer` struct
+3. Register the handler: `s.srv.AddTool(tool, s.handleNewTool)`
+4. Handler signature: `func (s *mcpServer) handleNewTool(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error)`
+5. Extract params from `req.Params.Arguments`, call engine methods, return `mcp.NewToolResultText(formatted)`

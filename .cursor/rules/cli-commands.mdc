@@ -1,0 +1,97 @@
+---
+description: "CLI binary usage for OLM catalog inspection, batch validation, telco diagnosis, and unified diagnostics"
+alwaysApply: false
+---
+
+# CLI Commands
+
+All binaries are in `./bin/` — build with `make build` before use.
+
+## catalog-bundle-inspect
+
+Inspect OLM catalog bundles, resolve channel heads, extract commit/version metadata.
+
+```bash
+./bin/catalog-bundle-inspect \
+  --catalog <catalog-image> \
+  --package <package-name> \
+  [--channel <channel>] \
+  [--version <version>] \
+  [--json] \
+  [--timeout 10m]
+```
+
+**Must-gather mode** (alternative):
+```bash
+./bin/catalog-bundle-inspect \
+  --must-gather <path> \
+  --package <name> \
+  [--health-check] \
+  [--environment lab|production|disconnected|kvm] \
+  [--rca] [--rca-file <path>] \
+  [--json]
+```
+
+## batch-validate
+
+Validate multiple operators from a catalog index.
+
+```bash
+CATALOG=<catalog-image> LIST=<operator-list-file> ./bin/batch-validate
+```
+
+The list file contains one package name per line. Results are classified as OK, PARTIAL, or FAIL.
+
+## telco-diagnose
+
+Production diagnosis of the telco operator suite (27 OLM + IDMS).
+
+```bash
+./bin/telco-diagnose \
+  --must-gather <path> \
+  [--environment lab|production|disconnected|kvm] \
+  [--catalog <catalog-image>] \
+  [--cluster-name <name>] \
+  [--rca-file <output-path>] \
+  [--state-dir <dir>] \
+  [--json]
+```
+
+Runs 20-dimension OLM health checks + 13 infrastructure dimensions per operator. Generates shareable RCA markdown reports.
+
+## opm-diagnose
+
+Unified diagnostics — supports both live cluster (kubeconfig) and must-gather modes.
+
+```bash
+./bin/opm-diagnose \
+  --must-gather <path> \
+  --package <name> \
+  [--kubeconfig <path>] [--context <name>] \
+  [--adhd] [--frames 5] [--depth 3] \
+  [--rag] [--rag-config rag-config.yaml] \
+  [--learning] [--metadata-dir <dir>] \
+  [--repo-correlation] [--github-token <token>] \
+  [--environment lab|production|disconnected|kvm] \
+  [--rca] [--rca-file <path>] \
+  [--json]
+```
+
+Full-featured: ADHD divergent analysis, RAG knowledge base, self-learning, repo correlation, session continuity.
+
+## RAG CLIs
+
+```bash
+./bin/ocp-rag-ingest --config rag-config.yaml
+./bin/ocp-rag-query --config rag-config.yaml --collection docs "search query" [--json]
+./bin/ocp-rag-server --config rag-config.yaml
+```
+
+## Environment Variables
+
+| Variable | Purpose |
+|---|---|
+| `DOCKER_CONFIG` | Registry auth directory (contains config.json) |
+| `REGISTRY_AUTH_FILE` | Alternative registry credentials file |
+| `ANTHROPIC_API_KEY` | Claude API key (for ADHD and code analysis) |
+| `GH_TOKEN` / `GITHUB_TOKEN` | GitHub API (for repo correlation and issue search) |

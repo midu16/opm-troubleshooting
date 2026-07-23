@@ -1,0 +1,37 @@
+---
+description: "Go coding conventions for opm-troubleshooting"
+globs: ["**/*.go"]
+alwaysApply: false
+---
+
+# Go Conventions
+
+## Build
+
+- Always use build tag `containers_image_openpgp` to avoid gpgme C dependency
+- `CGO_ENABLED=0` for cross-compilation (except when using sqlite3 which requires CGO)
+- Binaries go in `cmd/<name>/main.go`, all library code in `internal/`
+
+## Package Structure
+
+All packages under `internal/` — no `pkg/` directory. Key packages:
+- `catalog/` — FBC rendering and channel resolution
+- `imageinspect/` — OCI image label extraction
+- `bundlecsv/` — ClusterServiceVersion parsing from bundle layers
+- `rag/` — RAG engine, vector store, embeddings
+- `rag/mcp/` — MCP server wrapping RAG engine
+- `rag/ingest/` — data ingestion pipeline
+- `datasource/` — `ClusterDataSource` interface (must-gather + live cluster)
+- `healthcheck/` — 33 health dimension checks
+- `analysis/` — central 12-step analysis orchestrator
+- `adhd/` — divergent analysis engine (parallel cognitive frames)
+- `claudeapi/` — Anthropic Claude API client
+- `rca/` — 14-section RCA report generator
+
+## Patterns
+
+- Return `(result, error)` pairs; wrap errors with `fmt.Errorf("context: %w", err)`
+- Constructor injection for dependencies (e.g., `rag.NewEngine(cfg)`, `adhd.NewEngine(opts)`)
+- Test files alongside source: `foo_test.go` next to `foo.go`
+- Use `golang.org/x/sync/errgroup` for concurrent operations
+- No global state or init() functions

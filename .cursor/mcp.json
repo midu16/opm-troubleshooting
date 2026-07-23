@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ocp-rag": {
+      "command": "${workspaceFolder}/bin/ocp-rag-server",
+      "args": ["--config", "${workspaceFolder}/rag-config.yaml"]
+    }
+  }
+}

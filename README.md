@@ -140,6 +140,47 @@ ln -s /path/to/opm-troubleshooting/.opencode .opencode
 cp /path/to/opm-troubleshooting/opencode.json opencode.json
 ```
 
+### Option 4: Cursor
+
+Cursor discovers project context from `.cursor/rules/` and MCP servers from `.cursor/mcp.json`.
+
+**Prerequisites**: Cursor IDE (v0.45+) with Agent Mode enabled, Go 1.26.3+ for building binaries.
+
+```bash
+# Clone and build
+git clone https://github.com/midu16/opm-troubleshooting.git
+cd opm-troubleshooting
+make build
+
+# Open in Cursor
+cursor .
+```
+
+Cursor auto-discovers:
+- `.cursor/rules/*.mdc` — Project context, OLM troubleshooting workflows, CLI commands, MCP tool guide
+- `.cursor/mcp.json` — OCP RAG MCP server (8 tools: `search_docs`, `troubleshoot_operator`, `search_operator_code`, `search_telco_configs`, `get_operator_info`, `search_known_issues`, `search_errata`, `update_rag`)
+
+**Verify MCP**: Open Cursor Settings > Tools & MCP. The `ocp-rag` server should show a green status indicator with 8 tools listed.
+
+**Agent Mode examples**:
+```
+Inspect the kubernetes-nmstate-operator bundle from quay.io/prega/prega-operator-index:v4.22-latest
+
+Why is my cluster-logging subscription failing on channel "stable"?
+
+Run telco-diagnose on the must-gather at /path/to/must-gather.local.123456
+
+What known issues exist for the cluster-etcd-operator on OCP 4.22?
+```
+
+**Rules** (6 `.mdc` files in `.cursor/rules/`):
+- `base.mdc` — Always-apply project context and build commands
+- `go-conventions.mdc` — Go coding conventions (auto-attached to `*.go` files)
+- `olm-troubleshooting.mdc` — 6 diagnostic workflows (agent-requested)
+- `mcp-tools.mdc` — MCP tool usage guide and decision tree (agent-requested)
+- `cli-commands.mdc` — CLI binary reference with flags and examples (agent-requested)
+- `rag-development.mdc` — RAG system development guide (auto-attached to `internal/rag/`)
+
 ## Quick Start
 
 ### Example 1: Inspect an Operator Bundle
@@ -544,6 +585,15 @@ GOOS=linux GOARCH=386 CGO_ENABLED=0 \
 opm-troubleshooting/
 ├── .claude-plugin/
 │   └── plugin.json              # Plugin metadata
+├── .cursor/                     # Cursor IDE integration
+│   ├── mcp.json                 # MCP server config (ocp-rag)
+│   └── rules/                   # Project rules (.mdc format)
+│       ├── base.mdc             # Always-apply project context
+│       ├── go-conventions.mdc   # Go coding conventions
+│       ├── olm-troubleshooting.mdc  # OLM diagnostic workflows
+│       ├── mcp-tools.mdc        # MCP tool usage guide
+│       ├── cli-commands.mdc     # CLI binary reference
+│       └── rag-development.mdc  # RAG system development
 ├── commands/
 │   ├── inspect-bundle.md        # Command: inspect-bundle
 │   ├── resolve-channel.md       # Command: resolve-channel
