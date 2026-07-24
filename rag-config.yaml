@@ -42,6 +42,11 @@ openshift:
     - oc
     - api
     - kubernetes-nmstate
+    # Day-2 operators outside the openshift/ GitHub org (org/repo form).
+    - openshift-kni/cluster-group-upgrades-operator # TALM
+    - red-hat-storage/odf-operator # ODF
+    - stolostron/multiclusterhub-operator # ACM
+    - redhat-developer/gitops-operator # OpenShift GitOps
 retrieval:
   default_top_k: 8
   code_top_k: 6
