@@ -86,7 +86,7 @@ func parseGoFile(path, repoDir, repoName, version string) ([]rag.Document, error
 
 	relPath, _ := filepath.Rel(repoDir, path)
 	pkgName := f.Name.Name
-	repoURL := "https://github.com/openshift/" + repoName
+	repoURL := "https://github.com/" + repoGitHubPath(repoName)
 
 	docs := make([]rag.Document, 0, len(f.Decls))
 

@@ -152,6 +152,26 @@ func RunIngestion(ctx context.Context, cfg *rag.Config, store *rag.Store) error 
 	return nil
 }
 
+// repoGitHubPath resolves a config repos[] entry to its full "org/repo" GitHub
+// path. Entries already containing a "/" (e.g. "red-hat-storage/odf-operator")
+// are used as-is, so operators living outside the openshift/ org (ODF, ACM,
+// TALM, GitOps, etc.) can be ingested too. Bare names (e.g. "cluster-etcd-operator")
+// keep the historical default of the openshift/ org for backward compatibility.
+func repoGitHubPath(repo string) string {
+	if strings.Contains(repo, "/") {
+		return repo
+	}
+	return "openshift/" + repo
+}
+
+// orDefault returns s, or fallback if s is empty.
+func orDefault(s, fallback string) string {
+	if s == "" {
+		return fallback
+	}
+	return s
+}
+
 // cloneAllRepos clones or updates all configured OpenShift repos concurrently,
 // limited to cfg.Ingestion.MaxParallelClones goroutines. Returns a map of
 // repo -> HEAD commit hash.
@@ -184,14 +204,22 @@ func cloneAllRepos(ctx context.Context, cfg *rag.Config, reposDir, branch string
 					fmt.Fprintf(os.Stderr, "  warning: git pull %s: %v\n", repo, err)
 				}
 			} else {
-				// Clone fresh.
-				fmt.Fprintf(os.Stderr, "  cloning %s (branch: %s) ...\n", repo, branch)
+				// Clone fresh. External (org/repo) entries live outside the
+				// openshift/ org and follow their own project-specific branch
+				// naming (e.g. ACM release-2.x, GitOps release-1.x) that has
+				// no relation to the OCP release branch, so clone their
+				// default branch instead of forcing the OCP branch on them.
+				cloneBranch := branch
+				if strings.Contains(repo, "/") {
+					cloneBranch = ""
+				}
+				fmt.Fprintf(os.Stderr, "  cloning %s (branch: %s) ...\n", repo, orDefault(cloneBranch, "default"))
 				cmdCtx, cancel := context.WithTimeout(gctx, timeout)
 				defer cancel()
-				url := "https://github.com/openshift/" + repo
+				url := "https://github.com/" + repoGitHubPath(repo)
 				cloneArgs := []string{"clone", "--depth=1"}
-				if branch != "" {
-					cloneArgs = append(cloneArgs, "--branch", branch)
+				if cloneBranch != "" {
+					cloneArgs = append(cloneArgs, "--branch", cloneBranch)
 				}
 				cloneArgs = append(cloneArgs, url, repoDir)
 				cmd := exec.CommandContext(cmdCtx, "git", cloneArgs...)
