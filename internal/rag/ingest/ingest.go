@@ -18,8 +18,9 @@ import (
 //  2. Clones/updates all OpenShift repos (concurrent)
 //  3. Loads telco-reference configs
 //  4. Scrapes OCP docs (with caching)
-//  5. Resets and populates each collection
-//  6. Saves freshness metadata
+//  5. Scrapes ACM/MCE docs (with caching)
+//  6. Resets and populates each collection
+//  7. Saves freshness metadata
 func RunIngestion(ctx context.Context, cfg *rag.Config, store *rag.Store) error {
 	reposDir := cfg.ReposDir()
 	docsDir := cfg.DocsDir()
@@ -37,14 +38,14 @@ func RunIngestion(ctx context.Context, cfg *rag.Config, store *rag.Store) error 
 	ve := cfg.ActiveVersionEntry()
 
 	// Step 2: Clone/update all OpenShift repos concurrently.
-	fmt.Fprintf(os.Stderr, "\n[1/5] Cloning/updating %d OpenShift repos (branch: %s) ...\n", len(cfg.OpenShift.Repos), ve.OperatorBranch)
+	fmt.Fprintf(os.Stderr, "\n[1/7] Cloning/updating %d OpenShift repos (branch: %s) ...\n", len(cfg.OpenShift.Repos), ve.OperatorBranch)
 	repoCommits, err := cloneAllRepos(ctx, cfg, reposDir, ve.OperatorBranch)
 	if err != nil {
 		return fmt.Errorf("clone repos: %w", err)
 	}
 
 	// Step 3: Load telco-reference configs.
-	fmt.Fprintf(os.Stderr, "\n[2/5] Loading telco-reference configs (branch: %s) ...\n", ve.TelcoBranch)
+	fmt.Fprintf(os.Stderr, "\n[2/7] Loading telco-reference configs (branch: %s) ...\n", ve.TelcoBranch)
 	telcoDocs, err := LoadTelcoReference(ctx, cfg, ve.TelcoBranch)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "  warning: telco-reference: %v\n", err)
@@ -52,15 +53,32 @@ func RunIngestion(ctx context.Context, cfg *rag.Config, store *rag.Store) error 
 	fmt.Fprintf(os.Stderr, "  loaded %d telco documents\n", len(telcoDocs))
 
 	// Step 4: Scrape OCP docs.
-	fmt.Fprintf(os.Stderr, "\n[3/5] Scraping OCP %s docs (branch: %s) ...\n", cfg.OpenShift.Version, ve.DocsBranch)
+	fmt.Fprintf(os.Stderr, "\n[3/7] Scraping OCP %s docs (branch: %s) ...\n", cfg.OpenShift.Version, ve.DocsBranch)
 	ocpDocs, err := ScrapeOCPDocs(ctx, cfg, ve.DocsBranch)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "  warning: OCP docs: %v\n", err)
 	}
 	fmt.Fprintf(os.Stderr, "  scraped %d doc chunks\n", len(ocpDocs))
 
-	// Step 5: Build all collection documents and populate the store.
-	fmt.Fprintf(os.Stderr, "\n[4/5] Building and indexing collections ...\n")
+	// Step 5: Scrape ACM/MCE docs.
+	var acmDocs []rag.Document
+	if cfg.OpenShift.ACMDocs.Enabled {
+		acmBranch := ve.ACMDocsBranch
+		if acmBranch == "" {
+			acmBranch = "2.17_stage"
+		}
+		fmt.Fprintf(os.Stderr, "\n[4/7] Scraping ACM/MCE docs (branch: %s) ...\n", acmBranch)
+		acmDocs, err = ScrapeACMDocs(ctx, cfg, acmBranch)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "  warning: ACM docs: %v\n", err)
+		}
+		fmt.Fprintf(os.Stderr, "  scraped %d ACM doc chunks\n", len(acmDocs))
+	} else {
+		fmt.Fprintf(os.Stderr, "\n[4/7] ACM/MCE docs ingestion disabled, skipping.\n")
+	}
+
+	// Step 6: Build all collection documents and populate the store.
+	fmt.Fprintf(os.Stderr, "\n[5/7] Building and indexing collections ...\n")
 
 	// Build code docs from all repos.
 	var codeDocs []rag.Document
@@ -128,6 +146,7 @@ func RunIngestion(ctx context.Context, cfg *rag.Config, store *rag.Store) error 
 		{rag.CollTelco, telcoDocs},
 		{rag.CollKnownIssues, knownIssues},
 		{rag.CollManifests, manifestDocs},
+		{rag.CollACMDocs, acmDocs},
 	}
 
 	for _, c := range collections {
@@ -142,8 +161,8 @@ func RunIngestion(ctx context.Context, cfg *rag.Config, store *rag.Store) error 
 		}
 	}
 
-	// Step 6: Save freshness metadata.
-	fmt.Fprintf(os.Stderr, "\n[5/5] Saving ingestion metadata ...\n")
+	// Step 7: Save freshness metadata.
+	fmt.Fprintf(os.Stderr, "\n[6/7] Saving ingestion metadata ...\n")
 	if err := rag.SaveIngestMeta(cfg.DataDir, cfg.Freshness.MetaFile, rag.AllCollections, repoCommits); err != nil {
 		return fmt.Errorf("save ingest meta: %w", err)
 	}

@@ -29,6 +29,12 @@ type VersionEntry struct {
 	DocsBranch     string `json:"docs_branch"`
 	OperatorBranch string `json:"operator_branch"`
 	TelcoBranch    string `json:"telco_branch"`
+	ACMDocsBranch  string `json:"acm_docs_branch"`
+}
+
+type ACMDocsConfig struct {
+	Repo    string `json:"repo"`
+	Enabled bool   `json:"enabled"`
 }
 
 type OpenShiftConfig struct {
@@ -36,6 +42,7 @@ type OpenShiftConfig struct {
 	DocsBaseURL string         `json:"docs_base_url"` // Deprecated: docs are cloned from GitHub. Kept for config backward compatibility.
 	Repos       []string       `json:"repos"`
 	Versions    []VersionEntry `json:"versions"`
+	ACMDocs     ACMDocsConfig  `json:"acm_docs"`
 }
 
 type RetrievalConfig struct {
@@ -91,6 +98,10 @@ func DefaultConfig() *Config {
 		OpenShift: OpenShiftConfig{
 			Version:     "4.22",
 			DocsBaseURL: "https://docs.redhat.com/en/documentation/openshift_container_platform/4.22",
+			ACMDocs: ACMDocsConfig{
+				Repo:    "stolostron/rhacm-docs",
+				Enabled: true,
+			},
 			Repos: []string{
 				"cluster-etcd-operator",
 				"cluster-kube-apiserver-operator",
@@ -183,10 +194,11 @@ func applyEnvOverrides(cfg *Config) {
 	}
 }
 
-func (c *Config) ReposDir() string   { return filepath.Join(c.DataDir, "repos") }
-func (c *Config) DocsDir() string    { return filepath.Join(c.DataDir, "docs") }
-func (c *Config) ChromemDir() string { return filepath.Join(c.DataDir, "chromem") }
-func (c *Config) TelcoDir() string   { return filepath.Join(c.DataDir, "telco-reference") }
+func (c *Config) ReposDir() string    { return filepath.Join(c.DataDir, "repos") }
+func (c *Config) DocsDir() string     { return filepath.Join(c.DataDir, "docs") }
+func (c *Config) ChromemDir() string  { return filepath.Join(c.DataDir, "chromem") }
+func (c *Config) TelcoDir() string    { return filepath.Join(c.DataDir, "telco-reference") }
+func (c *Config) ACMDocsDir() string  { return filepath.Join(c.DataDir, "docs", "rhacm-docs") }
 
 func synthesizeVersionEntry(version string) VersionEntry {
 	return VersionEntry{
@@ -194,6 +206,7 @@ func synthesizeVersionEntry(version string) VersionEntry {
 		DocsBranch:     "enterprise-" + version,
 		OperatorBranch: "release-" + version,
 		TelcoBranch:    "release-" + version,
+		ACMDocsBranch:  "2.17_stage",
 	}
 }
 

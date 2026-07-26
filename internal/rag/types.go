@@ -8,9 +8,10 @@ const (
 	CollTelco       Collection = "telco_configs"
 	CollKnownIssues Collection = "known_issues"
 	CollManifests   Collection = "manifests"
+	CollACMDocs     Collection = "acm_docs"
 )
 
-var AllCollections = []Collection{CollDocs, CollCode, CollTelco, CollKnownIssues, CollManifests}
+var AllCollections = []Collection{CollDocs, CollCode, CollTelco, CollKnownIssues, CollManifests, CollACMDocs}
 
 type Document struct {
 	ID       string

@@ -119,8 +119,8 @@ func TestBuildTroubleshootQuery(t *testing.T) {
 }
 
 func TestCollectionConstants(t *testing.T) {
-	if len(AllCollections) != 5 {
-		t.Errorf("expected 5 collections, got %d", len(AllCollections))
+	if len(AllCollections) != 6 {
+		t.Errorf("expected 6 collections, got %d", len(AllCollections))
 	}
 }
 

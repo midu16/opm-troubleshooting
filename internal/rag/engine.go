@@ -50,6 +50,7 @@ func (e *Engine) Troubleshoot(ctx context.Context, operator string, symptoms []s
 		{CollCode, e.config.Retrieval.CodeTopK, true},
 		{CollTelco, e.config.Retrieval.ConfigTopK, false},
 		{CollKnownIssues, e.config.Retrieval.IssuesTopK, false},
+		{CollACMDocs, e.config.Retrieval.DefaultTopK, true},
 	}
 
 	results := make([]collResult, len(searches))
@@ -127,6 +128,18 @@ func (e *Engine) Troubleshoot(ctx context.Context, operator string, symptoms []s
 				})
 			}
 			summaryParts = append(summaryParts, fmt.Sprintf("%d known issues", len(r.docs)))
+
+		case CollACMDocs:
+			for _, d := range r.docs {
+				tr.DocumentationRefs = append(tr.DocumentationRefs, DocReference{
+					Title:   metaOrDefault(d.Metadata, "section", "ACM/MCE Documentation"),
+					Source:  metaOrDefault(d.Metadata, "source", "rhacm-docs"),
+					Excerpt: truncate(d.Content, 300),
+				})
+			}
+			if len(r.docs) > 0 {
+				summaryParts = append(summaryParts, fmt.Sprintf("%d ACM/MCE documentation references", len(r.docs)))
+			}
 		}
 	}
 
@@ -143,6 +156,18 @@ func (e *Engine) Troubleshoot(ctx context.Context, operator string, symptoms []s
 
 func (e *Engine) SearchDocs(ctx context.Context, query string) (*SearchResult, error) {
 	docs, err := e.hybridRetrieve(ctx, CollDocs, query, e.config.Retrieval.DefaultTopK)
+	if err != nil {
+		return nil, err
+	}
+	acmDocs, err := e.hybridRetrieve(ctx, CollACMDocs, query, e.config.Retrieval.DefaultTopK/2)
+	if err == nil {
+		docs = append(docs, acmDocs...)
+	}
+	return docsToSearchResult(query, docs), nil
+}
+
+func (e *Engine) SearchACMDocs(ctx context.Context, query string) (*SearchResult, error) {
+	docs, err := e.hybridRetrieve(ctx, CollACMDocs, query, e.config.Retrieval.DefaultTopK)
 	if err != nil {
 		return nil, err
 	}
@@ -322,7 +347,7 @@ func (e *Engine) searchForSymptom(ctx context.Context, dim DimensionSymptom, ope
 		kind string
 		docs []Document
 	}
-	ch := make(chan searchResult, 3)
+	ch := make(chan searchResult, 4)
 	var wg sync.WaitGroup
 
 	wg.Add(1)
@@ -357,6 +382,15 @@ func (e *Engine) searchForSymptom(ctx context.Context, dim DimensionSymptom, ope
 		}
 		if err == nil {
 			ch <- searchResult{kind: "issues", docs: docs}
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		docs, err := e.hybridRetrieve(ctx, CollACMDocs, query, e.config.Retrieval.DefaultTopK/2)
+		if err == nil {
+			ch <- searchResult{kind: "docs", docs: docs}
 		}
 	}()
 

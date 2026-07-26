@@ -89,6 +89,14 @@ func (s *mcpServer) registerTools() {
 	)
 
 	s.srv.AddTool(
+		mcp.NewTool("search_acm_docs",
+			mcp.WithDescription("Search Red Hat Advanced Cluster Management (ACM) and Multicluster Engine (MCE) documentation for cluster management, governance, observability, and application lifecycle guidance"),
+			mcp.WithString("query", mcp.Required(), mcp.Description("Search query for ACM/MCE documentation")),
+		),
+		s.handleSearchACMDocs,
+	)
+
+	s.srv.AddTool(
 		mcp.NewTool("search_errata",
 			mcp.WithDescription("Search errata and known issues by OCP version"),
 			mcp.WithString("ocp_version", mcp.Required(), mcp.Description("OCP version (e.g. 4.22)")),
@@ -145,6 +153,20 @@ func (s *mcpServer) handleSearchTelco(ctx context.Context, req mcp.CallToolReque
 	}
 
 	return textResult(formatSearchResult("Telco Reference Configs", result)), nil
+}
+
+func (s *mcpServer) handleSearchACMDocs(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	query := req.GetString("query", "")
+	if query == "" {
+		return errResult("query is required"), nil
+	}
+
+	result, err := s.engine.SearchACMDocs(ctx, query)
+	if err != nil {
+		return errResult("search failed: " + err.Error()), nil
+	}
+
+	return textResult(formatSearchResult("ACM/MCE Documentation", result)), nil
 }
 
 func (s *mcpServer) handleTroubleshoot(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -234,6 +256,15 @@ func (s *mcpServer) handleGetOperatorInfo(ctx context.Context, req mcp.CallToolR
 	if err == nil && len(configs.Documents) > 0 {
 		sb.WriteString("## Reference Configurations\n\n")
 		for _, d := range configs.Documents {
+			sb.WriteString(fmt.Sprintf("- **%s**: %s\n", d.Title, d.Excerpt))
+		}
+		sb.WriteString("\n")
+	}
+
+	acmDocs, err := s.engine.SearchACMDocs(ctx, operator)
+	if err == nil && len(acmDocs.Documents) > 0 {
+		sb.WriteString("## ACM/MCE Documentation\n\n")
+		for _, d := range acmDocs.Documents {
 			sb.WriteString(fmt.Sprintf("- **%s**: %s\n", d.Title, d.Excerpt))
 		}
 		sb.WriteString("\n")
