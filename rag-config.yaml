@@ -5,6 +5,9 @@ embedding:
 openshift:
   version: "4.22"
   docs_base_url: "https://docs.redhat.com/en/documentation/openshift_container_platform/4.22"
+  telco_reference:
+    repo: "openshift-kni/telco-reference"
+    enabled: true
   acm_docs:
     repo: "stolostron/rhacm-docs"
     enabled: true

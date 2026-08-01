@@ -1,17 +1,22 @@
 package learning
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/midu16/opm-troubleshooting/internal/metadata"
 )
 
 // openTestStore creates a MetadataStore in a temporary directory for testing.
+// Skips the test when CGO is disabled (go-sqlite3 requires cgo).
 func openTestStore(t *testing.T) *metadata.MetadataStore {
 	t.Helper()
 	dir := t.TempDir()
 	store, err := metadata.Open(dir)
 	if err != nil {
+		if strings.Contains(err.Error(), "cgo") {
+			t.Skipf("skipping: go-sqlite3 requires CGO_ENABLED=1: %v", err)
+		}
 		t.Fatalf("metadata.Open(%q): %v", dir, err)
 	}
 	t.Cleanup(func() { store.Close() })

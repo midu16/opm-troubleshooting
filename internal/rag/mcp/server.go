@@ -55,7 +55,7 @@ func (s *mcpServer) registerTools() {
 
 	s.srv.AddTool(
 		mcp.NewTool("search_telco_configs",
-			mcp.WithDescription("Search telco-reference validated configurations for telco-core and telco-ran deployments"),
+			mcp.WithDescription("Search telco-reference validated configurations for telco-core, telco-ran, and telco-hub deployments"),
 			mcp.WithString("query", mcp.Required(), mcp.Description("Search query for telco configurations")),
 		),
 		s.handleSearchTelco,

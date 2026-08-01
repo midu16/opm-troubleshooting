@@ -44,13 +44,18 @@ func RunIngestion(ctx context.Context, cfg *rag.Config, store *rag.Store) error 
 		return fmt.Errorf("clone repos: %w", err)
 	}
 
-	// Step 3: Load telco-reference configs.
-	fmt.Fprintf(os.Stderr, "\n[2/7] Loading telco-reference configs (branch: %s) ...\n", ve.TelcoBranch)
-	telcoDocs, err := LoadTelcoReference(ctx, cfg, ve.TelcoBranch)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "  warning: telco-reference: %v\n", err)
+	// Step 3: Load telco-reference content.
+	var telcoDocs []rag.Document
+	if cfg.OpenShift.TelcoReference.Enabled {
+		fmt.Fprintf(os.Stderr, "\n[2/7] Loading %s (branch: %s) ...\n", cfg.OpenShift.TelcoReference.Repo, ve.TelcoBranch)
+		telcoDocs, err = LoadTelcoReference(ctx, cfg, ve.TelcoBranch)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "  warning: %s: %v\n", cfg.OpenShift.TelcoReference.Repo, err)
+		}
+		fmt.Fprintf(os.Stderr, "  loaded %d telco documents\n", len(telcoDocs))
+	} else {
+		fmt.Fprintf(os.Stderr, "\n[2/7] Telco-reference ingestion disabled, skipping.\n")
 	}
-	fmt.Fprintf(os.Stderr, "  loaded %d telco documents\n", len(telcoDocs))
 
 	// Step 4: Scrape OCP docs.
 	fmt.Fprintf(os.Stderr, "\n[3/7] Scraping OCP %s docs (branch: %s) ...\n", cfg.OpenShift.Version, ve.DocsBranch)
@@ -94,6 +99,12 @@ func RunIngestion(ctx context.Context, cfg *rag.Config, store *rag.Store) error 
 			continue
 		}
 		codeDocs = append(codeDocs, repoDocs...)
+	}
+	// Include Go source from telco-reference (if any).
+	for _, d := range telcoDocs {
+		if d.Metadata["type"] == "go" {
+			codeDocs = append(codeDocs, d)
+		}
 	}
 	fmt.Fprintf(os.Stderr, "  total code documents: %d\n", len(codeDocs))
 

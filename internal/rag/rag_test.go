@@ -18,6 +18,12 @@ func TestDefaultConfig(t *testing.T) {
 	if len(cfg.OpenShift.Repos) != 27 {
 		t.Errorf("expected 27 repos, got %d", len(cfg.OpenShift.Repos))
 	}
+	if cfg.OpenShift.TelcoReference.Repo != "openshift-kni/telco-reference" {
+		t.Errorf("expected TelcoReference.Repo=openshift-kni/telco-reference, got %s", cfg.OpenShift.TelcoReference.Repo)
+	}
+	if !cfg.OpenShift.TelcoReference.Enabled {
+		t.Error("expected TelcoReference.Enabled=true")
+	}
 	if cfg.Retrieval.DefaultTopK != 8 {
 		t.Errorf("expected DefaultTopK=8, got %d", cfg.Retrieval.DefaultTopK)
 	}

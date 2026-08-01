@@ -3,6 +3,7 @@ package rag
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"sigs.k8s.io/yaml"
@@ -37,12 +38,18 @@ type ACMDocsConfig struct {
 	Enabled bool   `json:"enabled"`
 }
 
+type TelcoRefConfig struct {
+	Repo    string `json:"repo"`
+	Enabled bool   `json:"enabled"`
+}
+
 type OpenShiftConfig struct {
-	Version     string         `json:"version"`
-	DocsBaseURL string         `json:"docs_base_url"` // Deprecated: docs are cloned from GitHub. Kept for config backward compatibility.
-	Repos       []string       `json:"repos"`
-	Versions    []VersionEntry `json:"versions"`
-	ACMDocs     ACMDocsConfig  `json:"acm_docs"`
+	Version        string         `json:"version"`
+	DocsBaseURL    string         `json:"docs_base_url"` // Deprecated: docs are cloned from GitHub. Kept for config backward compatibility.
+	Repos          []string       `json:"repos"`
+	Versions       []VersionEntry `json:"versions"`
+	ACMDocs        ACMDocsConfig  `json:"acm_docs"`
+	TelcoReference TelcoRefConfig `json:"telco_reference"`
 }
 
 type RetrievalConfig struct {
@@ -100,6 +107,10 @@ func DefaultConfig() *Config {
 			DocsBaseURL: "https://docs.redhat.com/en/documentation/openshift_container_platform/4.22",
 			ACMDocs: ACMDocsConfig{
 				Repo:    "stolostron/rhacm-docs",
+				Enabled: true,
+			},
+			TelcoReference: TelcoRefConfig{
+				Repo:    "openshift-kni/telco-reference",
 				Enabled: true,
 			},
 			Repos: []string{
@@ -197,7 +208,15 @@ func applyEnvOverrides(cfg *Config) {
 func (c *Config) ReposDir() string    { return filepath.Join(c.DataDir, "repos") }
 func (c *Config) DocsDir() string     { return filepath.Join(c.DataDir, "docs") }
 func (c *Config) ChromemDir() string  { return filepath.Join(c.DataDir, "chromem") }
-func (c *Config) TelcoDir() string    { return filepath.Join(c.DataDir, "telco-reference") }
+func (c *Config) TelcoDir() string {
+	repo := c.OpenShift.TelcoReference.Repo
+	if repo == "" {
+		return filepath.Join(c.DataDir, "telco-reference")
+	}
+	parts := strings.SplitN(repo, "/", 2)
+	name := parts[len(parts)-1]
+	return filepath.Join(c.DataDir, name)
+}
 func (c *Config) ACMDocsDir() string  { return filepath.Join(c.DataDir, "docs", "rhacm-docs") }
 
 func synthesizeVersionEntry(version string) VersionEntry {

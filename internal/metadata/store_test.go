@@ -5,17 +5,22 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/midu16/opm-troubleshooting/internal/session"
 )
 
 // helper opens a MetadataStore in a temporary directory and registers cleanup.
+// Skips the test when CGO is disabled (go-sqlite3 requires cgo).
 func openTestStore(t *testing.T) *MetadataStore {
 	t.Helper()
 	dir := t.TempDir()
 	store, err := Open(dir)
 	if err != nil {
+		if strings.Contains(err.Error(), "cgo") {
+			t.Skipf("skipping: go-sqlite3 requires CGO_ENABLED=1: %v", err)
+		}
 		t.Fatalf("Open(%q): %v", dir, err)
 	}
 	t.Cleanup(func() { store.Close() })
@@ -28,6 +33,9 @@ func TestOpenAndMigrate(t *testing.T) {
 	dir := t.TempDir()
 	store, err := Open(dir)
 	if err != nil {
+		if strings.Contains(err.Error(), "cgo") {
+			t.Skipf("skipping: go-sqlite3 requires CGO_ENABLED=1: %v", err)
+		}
 		t.Fatalf("Open: %v", err)
 	}
 	defer store.Close()
@@ -84,6 +92,9 @@ func TestOpenIdempotentMigrate(t *testing.T) {
 	// Open twice to verify migration is idempotent.
 	s1, err := Open(dir)
 	if err != nil {
+		if strings.Contains(err.Error(), "cgo") {
+			t.Skipf("skipping: go-sqlite3 requires CGO_ENABLED=1: %v", err)
+		}
 		t.Fatalf("first Open: %v", err)
 	}
 	s1.Close()
