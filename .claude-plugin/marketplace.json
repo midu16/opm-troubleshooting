@@ -1,5 +1,6 @@
 {
   "name": "opm-troubleshooting",
+  "description": "OLM catalog bundle inspection, operator troubleshooting, and OpenShift RAG doc search for Claude Code",
   "owner": {
     "name": "midu16"
   },

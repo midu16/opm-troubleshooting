@@ -106,15 +106,20 @@ sha256sum -c catalog-bundle-inspect.tar.gz.sha256
 ### Verify Installation
 
 ```bash
-# List available commands
+# Confirm the plugin is installed
 /plugin list
 
-# Should show:
-# - opm-troubleshooting:inspect-bundle
-# - opm-troubleshooting:resolve-channel
-# - opm-troubleshooting:batch-validate
-# - opm-troubleshooting:telco-diagnose
+# Then type the command prefix at the prompt to see the commands
+# (they are auto-discovered from commands/):
+#   /opm-troubleshooting:inspect-bundle
+#   /opm-troubleshooting:resolve-channel
+#   /opm-troubleshooting:batch-validate
+#   /opm-troubleshooting:telco-diagnose
+#   /opm-troubleshooting:adhd
 ```
+
+> See [docs/installing-in-claude-code.md](docs/installing-in-claude-code.md) for a full
+> walkthrough (adding the marketplace, activation, settings.json, troubleshooting).
 
 ### Option 3: OpenCode
 

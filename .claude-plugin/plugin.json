@@ -20,23 +20,5 @@
       "description": "Divergent ideation framework adapted with OLM-specific cognitive frames and tool integration"
     }
   },
-  "commands": [
-    {
-      "name": "inspect-bundle",
-      "path": "commands/inspect-bundle.md"
-    },
-    {
-      "name": "resolve-channel",
-      "path": "commands/resolve-channel.md"
-    },
-    {
-      "name": "batch-validate",
-      "path": "commands/batch-validate.md"
-    },
-    {
-      "name": "adhd",
-      "path": "commands/adhd.md",
-      "description": "Divergent ideation for OLM troubleshooting using parallel cognitive frames"
-    }
-  ]
+  "commands": "./commands/"
 }
