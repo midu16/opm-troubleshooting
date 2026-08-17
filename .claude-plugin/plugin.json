@@ -10,7 +10,9 @@
     "channel-resolution",
     "batch-validation",
     "divergent-ideation",
-    "automated-troubleshooting"
+    "automated-troubleshooting",
+    "rag-search",
+    "rag-ingestion"
   ],
   "attribution": {
     "adhd-framework": {

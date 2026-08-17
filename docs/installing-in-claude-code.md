@@ -154,6 +154,9 @@ You should see:
 - `/opm-troubleshooting:batch-validate`
 - `/opm-troubleshooting:telco-diagnose`
 - `/opm-troubleshooting:adhd`
+- `/opm-troubleshooting:rag-query` — search the docs/code/issues knowledge base
+- `/opm-troubleshooting:rag-ingest` — build/refresh the knowledge base
+- `/opm-troubleshooting:rag-server` — build/manage the `ocp-rag` MCP server
 
 Quick smoke test:
 

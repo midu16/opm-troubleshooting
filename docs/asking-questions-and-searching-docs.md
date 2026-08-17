@@ -31,6 +31,19 @@ make ocp-rag-server ocp-rag-ingest ocp-rag-query
 
 If that's all you needed, you're done. The rest of this doc explains each piece.
 
+### Or use the slash commands
+
+If you've installed the plugin, the same three binaries are exposed as slash commands —
+no need to type binary paths, and they build themselves on first use:
+
+```text
+/opm-troubleshooting:rag-ingest
+/opm-troubleshooting:rag-query --collection docs --json "OADP backup failure"
+```
+
+`/opm-troubleshooting:rag-server` builds/inspects the `ocp-rag` MCP server. See
+[Installing in Claude Code](./installing-in-claude-code.md) for setup.
+
 ---
 
 ## How it works (the mental model)
