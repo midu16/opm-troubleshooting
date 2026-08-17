@@ -10,14 +10,36 @@ import (
 )
 
 type Config struct {
-	DataDir   string          `json:"data_dir"`
-	Embedding EmbeddingConfig `json:"embedding"`
-	OpenShift OpenShiftConfig `json:"openshift"`
-	Retrieval RetrievalConfig `json:"retrieval"`
-	Chunking  ChunkingConfig  `json:"chunking"`
-	Ingestion IngestionConfig `json:"ingestion"`
-	Secret    SecretConfig    `json:"secret_filter"`
-	Freshness FreshnessConfig `json:"freshness"`
+	DataDir     string            `json:"data_dir"`
+	VectorStore VectorStoreConfig `json:"vector_store"`
+	Embedding   EmbeddingConfig   `json:"embedding"`
+	OpenShift   OpenShiftConfig   `json:"openshift"`
+	Retrieval   RetrievalConfig   `json:"retrieval"`
+	Chunking    ChunkingConfig    `json:"chunking"`
+	Ingestion   IngestionConfig   `json:"ingestion"`
+	Secret      SecretConfig      `json:"secret_filter"`
+	Freshness   FreshnessConfig   `json:"freshness"`
+}
+
+// VectorStoreConfig selects and configures the vector database backend.
+type VectorStoreConfig struct {
+	// Backend is "chromem" (default, embedded/local) or "qdrant" (external service).
+	Backend string       `json:"backend"`
+	Qdrant  QdrantConfig `json:"qdrant"`
+}
+
+// QdrantConfig holds connection settings for the external Qdrant backend.
+type QdrantConfig struct {
+	// URL is the Qdrant HTTP endpoint, e.g. http://qdrant:6333
+	URL string `json:"url"`
+	// APIKey is sent as the api-key header when set (Qdrant Cloud / secured deployments).
+	APIKey string `json:"api_key"`
+	// CollectionPrefix namespaces this instance's collections (optional).
+	CollectionPrefix string `json:"collection_prefix"`
+	// Distance metric for vector similarity: Cosine (default), Dot, or Euclid.
+	Distance string `json:"distance"`
+	// Timeout for individual HTTP requests to Qdrant.
+	Timeout duration `json:"timeout"`
 }
 
 type EmbeddingConfig struct {
@@ -46,6 +68,7 @@ type TelcoRefConfig struct {
 type OpenShiftConfig struct {
 	Version        string         `json:"version"`
 	DocsBaseURL    string         `json:"docs_base_url"` // Deprecated: docs are cloned from GitHub. Kept for config backward compatibility.
+	GitBaseURL     string         `json:"git_base_url"`  // Base URL for cloning repos (default https://github.com); set for a GitHub Enterprise host or mirror.
 	Repos          []string       `json:"repos"`
 	Versions       []VersionEntry `json:"versions"`
 	ACMDocs        ACMDocsConfig  `json:"acm_docs"`
@@ -98,6 +121,14 @@ func (d *duration) UnmarshalJSON(b []byte) error {
 func DefaultConfig() *Config {
 	return &Config{
 		DataDir: "rag-data",
+		VectorStore: VectorStoreConfig{
+			Backend: BackendChromem,
+			Qdrant: QdrantConfig{
+				URL:      "http://localhost:6333",
+				Distance: "Cosine",
+				Timeout:  duration{30 * time.Second},
+			},
+		},
 		Embedding: EmbeddingConfig{
 			URL:   "http://localhost:11434",
 			Model: "all-minilm",
@@ -105,6 +136,7 @@ func DefaultConfig() *Config {
 		OpenShift: OpenShiftConfig{
 			Version:     "4.22",
 			DocsBaseURL: "https://docs.redhat.com/en/documentation/openshift_container_platform/4.22",
+			GitBaseURL:  "https://github.com",
 			ACMDocs: ACMDocsConfig{
 				Repo:    "stolostron/rhacm-docs",
 				Enabled: true,
@@ -203,11 +235,41 @@ func applyEnvOverrides(cfg *Config) {
 	if v := os.Getenv("OCP_RAG_OCP_VERSION"); v != "" {
 		cfg.OpenShift.Version = v
 	}
+	if v := os.Getenv("OCP_RAG_GIT_BASE_URL"); v != "" {
+		cfg.OpenShift.GitBaseURL = v
+	}
+	if v := os.Getenv("OCP_RAG_VECTORSTORE_BACKEND"); v != "" {
+		cfg.VectorStore.Backend = v
+	}
+	if v := os.Getenv("OCP_RAG_QDRANT_URL"); v != "" {
+		cfg.VectorStore.Qdrant.URL = v
+	}
+	if v := os.Getenv("OCP_RAG_QDRANT_API_KEY"); v != "" {
+		cfg.VectorStore.Qdrant.APIKey = v
+	}
 }
 
-func (c *Config) ReposDir() string    { return filepath.Join(c.DataDir, "repos") }
-func (c *Config) DocsDir() string     { return filepath.Join(c.DataDir, "docs") }
-func (c *Config) ChromemDir() string  { return filepath.Join(c.DataDir, "chromem") }
+// GitBase returns the configured git host base URL for cloning repositories,
+// with a trailing slash trimmed. Defaults to https://github.com when unset so
+// existing configs keep working; override it for a GitHub Enterprise host or an
+// internal mirror.
+func (c *Config) GitBase() string {
+	base := strings.TrimRight(c.OpenShift.GitBaseURL, "/")
+	if base == "" {
+		return "https://github.com"
+	}
+	return base
+}
+
+// RepoURL resolves an "org/repo" slug to a full clone URL under the configured
+// git host (see GitBase).
+func (c *Config) RepoURL(slug string) string {
+	return c.GitBase() + "/" + strings.TrimPrefix(slug, "/")
+}
+
+func (c *Config) ReposDir() string   { return filepath.Join(c.DataDir, "repos") }
+func (c *Config) DocsDir() string    { return filepath.Join(c.DataDir, "docs") }
+func (c *Config) ChromemDir() string { return filepath.Join(c.DataDir, "chromem") }
 func (c *Config) TelcoDir() string {
 	repo := c.OpenShift.TelcoReference.Repo
 	if repo == "" {
@@ -217,7 +279,7 @@ func (c *Config) TelcoDir() string {
 	name := parts[len(parts)-1]
 	return filepath.Join(c.DataDir, name)
 }
-func (c *Config) ACMDocsDir() string  { return filepath.Join(c.DataDir, "docs", "rhacm-docs") }
+func (c *Config) ACMDocsDir() string { return filepath.Join(c.DataDir, "docs", "rhacm-docs") }
 
 func synthesizeVersionEntry(version string) VersionEntry {
 	return VersionEntry{

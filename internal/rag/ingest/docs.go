@@ -64,7 +64,7 @@ var docTopics = []struct {
 func ScrapeOCPDocs(ctx context.Context, cfg *rag.Config, docsBranch string) ([]rag.Document, error) {
 	docsRepoDir := filepath.Join(cfg.DocsDir(), "openshift-docs")
 
-	if err := cloneOrUpdateDocsRepo(ctx, docsRepoDir, docsBranch); err != nil {
+	if err := cloneOrUpdateDocsRepo(ctx, cfg, docsRepoDir, docsBranch); err != nil {
 		return nil, fmt.Errorf("openshift-docs repo: %w", err)
 	}
 
@@ -97,7 +97,7 @@ func ScrapeOCPDocs(ctx context.Context, cfg *rag.Config, docsBranch string) ([]r
 	return allDocs, nil
 }
 
-func cloneOrUpdateDocsRepo(ctx context.Context, repoDir, branch string) error {
+func cloneOrUpdateDocsRepo(ctx context.Context, cfg *rag.Config, repoDir, branch string) error {
 	if _, err := os.Stat(filepath.Join(repoDir, ".git")); err == nil {
 		fmt.Fprintf(os.Stderr, "  openshift-docs: updating ...\n")
 		cmd := exec.CommandContext(ctx, "git", "pull", "--ff-only")
@@ -115,7 +115,7 @@ func cloneOrUpdateDocsRepo(ctx context.Context, repoDir, branch string) error {
 	if branch != "" {
 		cloneArgs = append(cloneArgs, "--branch", branch)
 	}
-	cloneArgs = append(cloneArgs, "https://github.com/openshift/openshift-docs", repoDir)
+	cloneArgs = append(cloneArgs, cfg.RepoURL("openshift/openshift-docs"), repoDir)
 	cmd := exec.CommandContext(ctx, "git", cloneArgs...)
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {

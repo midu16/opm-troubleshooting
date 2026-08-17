@@ -27,7 +27,7 @@ var telcoProfiles = map[string]string{
 func LoadTelcoReference(ctx context.Context, cfg *rag.Config, telcoBranch string) ([]rag.Document, error) {
 	telcoDir := cfg.TelcoDir()
 	repoSlug := cfg.OpenShift.TelcoReference.Repo
-	repoURL := "https://github.com/" + repoSlug
+	repoURL := cfg.RepoURL(repoSlug)
 
 	if err := cloneOrUpdateTelco(ctx, cfg, telcoDir, repoURL, telcoBranch); err != nil {
 		return nil, fmt.Errorf("clone/update %s: %w", repoSlug, err)
@@ -40,7 +40,7 @@ func LoadTelcoReference(ctx context.Context, cfg *rag.Config, telcoBranch string
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "  warning: loading yaml from %s: %v\n", repoSlug, err)
 	} else {
-		tagTelcoProfile(yamlDocs, repoSlug)
+		tagTelcoProfile(cfg, yamlDocs, repoSlug)
 		allDocs = append(allDocs, yamlDocs...)
 	}
 
@@ -49,17 +49,17 @@ func LoadTelcoReference(ctx context.Context, cfg *rag.Config, telcoBranch string
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "  warning: loading markdown from %s: %v\n", repoSlug, err)
 	} else {
-		tagTelcoProfile(mdDocs, repoSlug)
+		tagTelcoProfile(cfg, mdDocs, repoSlug)
 		allDocs = append(allDocs, mdDocs...)
 	}
 
 	// Load Go source files (consistent with other repos).
 	ve := cfg.ActiveVersionEntry()
-	goDocs, err := ChunkGoSource(telcoDir, repoSlug, ve.Version, &cfg.Secret)
+	goDocs, err := ChunkGoSource(telcoDir, repoSlug, ve.Version, cfg.GitBase(), &cfg.Secret)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "  warning: loading go source from %s: %v\n", repoSlug, err)
 	} else {
-		tagTelcoProfile(goDocs, repoSlug)
+		tagTelcoProfile(cfg, goDocs, repoSlug)
 		allDocs = append(allDocs, goDocs...)
 	}
 
@@ -69,8 +69,8 @@ func LoadTelcoReference(ctx context.Context, cfg *rag.Config, telcoBranch string
 // tagTelcoProfile sets the telco_profile metadata field on documents whose
 // source path falls under a known profile subdirectory, and tags all
 // documents with the repo origin.
-func tagTelcoProfile(docs []rag.Document, repoSlug string) {
-	repoURL := "https://github.com/" + repoSlug
+func tagTelcoProfile(cfg *rag.Config, docs []rag.Document, repoSlug string) {
+	repoURL := cfg.RepoURL(repoSlug)
 	for i := range docs {
 		src := docs[i].Metadata["source"]
 		for dir, profile := range telcoProfiles {

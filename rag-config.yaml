@@ -1,10 +1,37 @@
 data_dir: rag-data
+
+# Vector database backend. Every endpoint below is configurable here (or via the
+# matching OCP_RAG_* environment variable), so no hostname is hard-coded.
+vector_store:
+  # backend: "chromem" (embedded, on-disk under data_dir/chromem — the default)
+  #          or "qdrant" (external, shared service — one writer, many readers).
+  # Env override: OCP_RAG_VECTORSTORE_BACKEND
+  backend: "chromem"
+  qdrant:
+    # Qdrant HTTP endpoint FQDN. Point this at your shared Qdrant service.
+    # Env override: OCP_RAG_QDRANT_URL
+    url: "http://localhost:6333"
+    # API key sent as the "api-key" header (Qdrant Cloud / secured deployments).
+    # Leave empty for an unauthenticated instance. Env override: OCP_RAG_QDRANT_API_KEY
+    api_key: ""
+    # Namespaces this deployment's collections (optional). e.g. "ocp422_"
+    collection_prefix: ""
+    # Similarity metric: Cosine (default), Dot, or Euclid.
+    distance: "Cosine"
+    # Per-request HTTP timeout to Qdrant.
+    timeout: "30s"
+
+# Embedding service (Ollama-compatible). FQDN is configurable here.
+# Env overrides: OCP_RAG_EMBEDDING_URL, OCP_RAG_EMBEDDING_MODEL
 embedding:
   url: "http://bazzite:11434"
   model: "qwen3-embedding:latest"
 openshift:
   version: "4.22"
   docs_base_url: "https://docs.redhat.com/en/documentation/openshift_container_platform/4.22"
+  # Base URL for cloning all source repos (docs, telco, operators). Override for a
+  # GitHub Enterprise host or an internal mirror. Env override: OCP_RAG_GIT_BASE_URL
+  git_base_url: "https://github.com"
   telco_reference:
     repo: "openshift-kni/telco-reference"
     enabled: true

@@ -21,7 +21,7 @@ import (
 //  5. Scrapes ACM/MCE docs (with caching)
 //  6. Resets and populates each collection
 //  7. Saves freshness metadata
-func RunIngestion(ctx context.Context, cfg *rag.Config, store *rag.Store) error {
+func RunIngestion(ctx context.Context, cfg *rag.Config, store rag.VectorStore) error {
 	reposDir := cfg.ReposDir()
 	docsDir := cfg.DocsDir()
 
@@ -93,7 +93,7 @@ func RunIngestion(ctx context.Context, cfg *rag.Config, store *rag.Store) error 
 			continue
 		}
 		fmt.Fprintf(os.Stderr, "  chunking Go source: %s ...\n", repo)
-		repoDocs, err := ChunkGoSource(repoDir, repo, ve.Version, &cfg.Secret)
+		repoDocs, err := ChunkGoSource(repoDir, repo, ve.Version, cfg.GitBase(), &cfg.Secret)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "    warning: %v\n", err)
 			continue
@@ -246,7 +246,7 @@ func cloneAllRepos(ctx context.Context, cfg *rag.Config, reposDir, branch string
 				fmt.Fprintf(os.Stderr, "  cloning %s (branch: %s) ...\n", repo, orDefault(cloneBranch, "default"))
 				cmdCtx, cancel := context.WithTimeout(gctx, timeout)
 				defer cancel()
-				url := "https://github.com/" + repoGitHubPath(repo)
+				url := cfg.RepoURL(repoGitHubPath(repo))
 				cloneArgs := []string{"clone", "--depth=1"}
 				if cloneBranch != "" {
 					cloneArgs = append(cloneArgs, "--branch", cloneBranch)

@@ -46,7 +46,7 @@ var acmDocTopics = []struct {
 func ScrapeACMDocs(ctx context.Context, cfg *rag.Config, branch string) ([]rag.Document, error) {
 	acmRepoDir := cfg.ACMDocsDir()
 
-	repoURL := "https://github.com/" + cfg.OpenShift.ACMDocs.Repo
+	repoURL := cfg.RepoURL(cfg.OpenShift.ACMDocs.Repo)
 	if err := cloneOrUpdateACMDocsRepo(ctx, acmRepoDir, repoURL, branch); err != nil {
 		return nil, fmt.Errorf("rhacm-docs repo: %w", err)
 	}

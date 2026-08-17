@@ -11,6 +11,7 @@ change.
 | Field | YAML key | Type | Default | Description |
 |---|---|---|---|---|
 | DataDir | `data_dir` | string | `"rag-data"` | Root directory for all cloned repos, docs, and vector-store data. Subdirectories `repos/`, `docs/`, `chromem/`, and `telco-reference/` are created beneath it automatically. |
+| VectorStore | `vector_store` | object | see below | Vector database backend selection and connection settings. |
 | Embedding | `embedding` | object | see below | Embedding service connection settings. |
 | OpenShift | `openshift` | object | see below | Target OpenShift version(s) and operator repository list. |
 | Retrieval | `retrieval` | object | see below | Top-K limits for each retrieval category. |
@@ -18,6 +19,39 @@ change.
 | Ingestion | `ingestion` | object | see below | Timeouts and parallelism for git/HTTP operations during data ingestion. |
 | Secret | `secret_filter` | object | see below | File-extension and filename patterns to exclude from ingestion to avoid leaking secrets. |
 | Freshness | `freshness` | object | see below | Metadata file used to track ingestion freshness. |
+
+---
+
+## vector_store
+
+Selects and configures the vector database backend. Two backends are supported:
+
+- **`chromem`** (default) — the embedded, pure-Go [chromem-go](https://github.com/philippgille/chromem-go)
+  store. Data is persisted on disk under `data_dir/chromem/`. Zero external
+  dependencies; ideal for a single machine.
+- **`qdrant`** — an external [Qdrant](https://qdrant.tech/) service reached over
+  its HTTP REST API. Use this to share one indexed knowledge base across many
+  readers (see [Vector Store Persistence](vector-store-persistence.md)).
+
+| Field | YAML key | Type | Default | Description |
+|---|---|---|---|---|
+| Backend | `backend` | string | `"chromem"` | Which backend to use: `"chromem"` or `"qdrant"`. |
+| Qdrant | `qdrant` | object | see below | Connection settings used when `backend: qdrant`. |
+
+### vector_store.qdrant
+
+| Field | YAML key | Type | Default | Description |
+|---|---|---|---|---|
+| URL | `url` | string | `"http://localhost:6333"` | Qdrant HTTP endpoint FQDN. Point this at your shared Qdrant service. |
+| APIKey | `api_key` | string | `""` | Sent as the `api-key` header for secured deployments / Qdrant Cloud. Empty means no auth. |
+| CollectionPrefix | `collection_prefix` | string | `""` | Namespaces this deployment's collections, e.g. `"ocp422_"`. Lets one Qdrant host serve multiple knowledge bases. |
+| Distance | `distance` | string | `"Cosine"` | Similarity metric: `Cosine`, `Dot`, or `Euclid`. |
+| Timeout | `timeout` | duration string | `"30s"` | Per-request HTTP timeout to Qdrant. |
+
+Each RAG collection (`docs`, `code`, `telco`, `issues`, `manifests`, `acm_docs`)
+maps to one Qdrant collection named `<collection_prefix><collection>`. Collections
+are created lazily on first ingestion, including a full-text index on the document
+content field to support hybrid (vector + keyword) retrieval.
 
 ---
 
@@ -40,6 +74,7 @@ Defines which OpenShift version(s) and operator repositories are ingested.
 |---|---|---|---|---|
 | Version | `version` | string | `"4.22"` | The active OpenShift version. Used to select the matching `VersionEntry` from `versions`, and as the basis for branch-name synthesis when `versions` is empty. |
 | DocsBaseURL | `docs_base_url` | string | `"https://docs.redhat.com/..."` | **Deprecated.** Previously pointed at the hosted documentation. Docs are now cloned directly from GitHub. The field is retained only for backward compatibility and is ignored at runtime. |
+| GitBaseURL | `git_base_url` | string | `"https://github.com"` | Base URL used to clone every source repository (docs, telco-reference, operators). Override it to use a GitHub Enterprise host or an internal mirror — no hostname is hard-coded in the ingestion pipeline. |
 | Repos | `repos` | []string | 27 operator repos (see full list below) | GitHub repository names under `openshift/` to clone and index. |
 | Versions | `versions` | []VersionEntry | `[]` (empty) | Explicit per-version branch mappings. See the **VersionEntry** section and the multi-version example below. |
 
@@ -179,6 +214,10 @@ config-file values.  They are applied after the YAML file is loaded.
 | `OCP_RAG_EMBEDDING_URL` | `embedding.url` | `OCP_RAG_EMBEDDING_URL=http://gpu-host:11434` |
 | `OCP_RAG_EMBEDDING_MODEL` | `embedding.model` | `OCP_RAG_EMBEDDING_MODEL=nomic-embed-text` |
 | `OCP_RAG_OCP_VERSION` | `openshift.version` | `OCP_RAG_OCP_VERSION=4.21` |
+| `OCP_RAG_GIT_BASE_URL` | `openshift.git_base_url` | `OCP_RAG_GIT_BASE_URL=https://github.example.com` |
+| `OCP_RAG_VECTORSTORE_BACKEND` | `vector_store.backend` | `OCP_RAG_VECTORSTORE_BACKEND=qdrant` |
+| `OCP_RAG_QDRANT_URL` | `vector_store.qdrant.url` | `OCP_RAG_QDRANT_URL=http://qdrant:6333` |
+| `OCP_RAG_QDRANT_API_KEY` | `vector_store.qdrant.api_key` | `OCP_RAG_QDRANT_API_KEY=***` |
 
 ---
 
@@ -189,6 +228,16 @@ The following YAML shows every field with its default value.
 ```yaml
 # Root directory for cloned repos, docs, and vector DB files.
 data_dir: "rag-data"
+
+# Vector database backend.
+vector_store:
+  backend: "chromem"          # "chromem" (embedded, on-disk) or "qdrant" (external)
+  qdrant:
+    url: "http://localhost:6333"
+    api_key: ""
+    collection_prefix: ""
+    distance: "Cosine"
+    timeout: "30s"
 
 # Embedding service settings (Ollama-compatible endpoint).
 embedding:
@@ -201,6 +250,9 @@ openshift:
 
   # Deprecated -- docs are cloned from GitHub; this field is ignored.
   # docs_base_url: "https://docs.redhat.com/..."
+
+  # Base URL for cloning repos (override for GitHub Enterprise / a mirror).
+  git_base_url: "https://github.com"
 
   # Operator repos to clone (under github.com/openshift/).
   repos:

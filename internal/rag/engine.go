@@ -8,14 +8,14 @@ import (
 )
 
 type Engine struct {
-	store  *Store
+	store  VectorStore
 	config *Config
 }
 
 func NewEngine(cfg *Config) (*Engine, error) {
 	embedFunc := NewOllamaEmbedder(cfg.Embedding.URL, cfg.Embedding.Model)
 
-	store, err := NewStore(cfg.ChromemDir(), embedFunc)
+	store, err := NewVectorStore(cfg, embedFunc)
 	if err != nil {
 		return nil, fmt.Errorf("create store: %w", err)
 	}
@@ -25,7 +25,7 @@ func NewEngine(cfg *Config) (*Engine, error) {
 
 func (e *Engine) Close() {}
 
-func (e *Engine) Store() *Store { return e.store }
+func (e *Engine) Store() VectorStore { return e.store }
 
 func (e *Engine) Config() *Config { return e.config }
 
