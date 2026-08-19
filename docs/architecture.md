@@ -52,7 +52,7 @@ graph TB
     subgraph AI["AI & Analysis Layer"]
         CL["claudeapi\n(Anthropic API)"]
         ADHD["adhd\n(13-frame divergent\nanalysis engine)"]
-        RAG["rag.Engine\n(embedded Go RAG\nwith chromem-go)"]
+        RAG["rag.Engine\n(Go RAG, pluggable\nchromem-go / Qdrant)"]
     end
 
     ADHD --> CL
@@ -127,21 +127,27 @@ graph TB
     LN --> ADHD
     LN --> HC
 
-    subgraph RAGStore["RAG Vector Store (embedded)"]
-        CHROMEM[("chromem-go\nIn-Process DB")]
+    subgraph RAGStore["RAG Vector Store (pluggable backend)"]
+        VS{{"VectorStore interface\n(vectorstore.go)"}}
+        CHROMEM[("chromem-go\nembedded / default")]
+        QD[("Qdrant\nexternal service")]
+        VS --> CHROMEM
+        VS --> QD
         C1["ocp_docs"]
         C2["operator_code"]
         C3["telco_configs"]
         C4["known_issues"]
         C5["manifests"]
+        C6["acm_docs"]
         CHROMEM --- C1
         CHROMEM --- C2
         CHROMEM --- C3
         CHROMEM --- C4
         CHROMEM --- C5
+        CHROMEM --- C6
     end
 
-    RAG --> CHROMEM
+    RAG --> VS
 
     subgraph External["External Systems"]
         K8S[("Kubernetes\nAPI Server")]
@@ -150,8 +156,9 @@ graph TB
         GIT[("Git Repos\n(clone)")]
         ANTH[("Anthropic\nClaude API")]
         SQL[("SQLite\nDatabase")]
-        RHDOCS[("Red Hat\nDocs")]
+        RHDOCS[("GitHub\ndoc + telco +\nACM repos")]
         OLLAMA[("Ollama\nEmbeddings")]
+        QDRANT[("Qdrant\nService")]
     end
 
     LC -.-> K8S
@@ -166,6 +173,7 @@ graph TB
     MD -.-> SQL
     RAG -.-> RHDOCS
     RAG -.-> OLLAMA
+    QD -.-> QDRANT
 
     classDef binary fill:#4a90d9,stroke:#2c5f8a,color:#fff
     classDef core fill:#e8534a,stroke:#b33c33,color:#fff
@@ -193,8 +201,8 @@ graph TB
     class RCA output
     class SS,MD,LN persist
     class TL domain
-    class RAG,CHROMEM,C1,C2,C3,C4,C5 rag
-    class K8S,REG,GH,GIT,ANTH,SQL,RHDOCS ext
+    class RAG,VS,CHROMEM,QD,C1,C2,C3,C4,C5,C6 rag
+    class K8S,REG,GH,GIT,ANTH,SQL,RHDOCS,QDRANT ext
 ```
 
 ## Analysis Pipeline (12-step must-gather flow)
@@ -353,6 +361,16 @@ flowchart TD
 
 ## RAG Knowledge Base (Step 5.5 detail)
 
+The RAG engine reads and writes through a `VectorStore` interface (`internal/rag/vectorstore.go`),
+so the same engine, ingestion pipeline, and MCP server run unchanged against either the
+embedded **chromem-go** backend (default, zero-dependency) or an external **Qdrant** service.
+The backend is selected by `vector_store.backend` in `rag-config.yaml`.
+
+All sources are config-driven: repos and docs are cloned from a configurable git host
+(`openshift.git_base_url`, default `https://github.com`, overridable for GitHub Enterprise or
+an internal mirror via `RepoURL()`), and the telco-reference and ACM-docs repos are each named
+by slug with an `enabled` flag rather than hardcoded.
+
 ```mermaid
 flowchart LR
     subgraph Go["Go Analysis Pipeline"]
@@ -361,37 +379,45 @@ flowchart LR
         ENGINE --> HYBRID
     end
 
-    HYBRID --> CHROMEM
+    HYBRID --> VS
 
-    subgraph Store["chromem-go (in-process, embedded)"]
-        CHROMEM[("chromem-go\nPersistent DB")]
-        C1["ocp_docs\n(OCP 4.22 docs)"]
-        C2["operator_code\n(Go source via go/ast)"]
-        C3["telco_configs\n(reference configs)"]
-        C4["known_issues\n(errata/bugs)"]
-        C5["manifests\n(CRDs/YAML)"]
-        CHROMEM --- C1
-        CHROMEM --- C2
-        CHROMEM --- C3
-        CHROMEM --- C4
-        CHROMEM --- C5
+    subgraph Backend["VectorStore interface (pluggable)"]
+        VS{{"VectorStore\n(vectorstore.go)"}}
+        CHROMEM[("chromem-go\nembedded / default")]
+        QD[("Qdrant\nexternal service")]
+        VS -->|"backend: chromem"| CHROMEM
+        VS -->|"backend: qdrant"| QD
     end
 
-    subgraph Embed["Embedding"]
-        OLLAMA["Ollama HTTP API\n/api/embed\nqwen3-embedding:latest"]
+    subgraph Collections["6 Collections"]
+        C1["ocp_docs\n(OCP docs)"]
+        C2["operator_code\n(Go source via go/ast)"]
+        C3["telco_configs\n(core / ran / hub)"]
+        C4["known_issues\n(errata/bugs)"]
+        C5["manifests\n(CRDs/YAML)"]
+        C6["acm_docs\n(RHACM/MCE docs)"]
+    end
+
+    CHROMEM --- Collections
+    QD --- Collections
+
+    subgraph Embed["Embedding (shared by both backends)"]
+        OLLAMA["Ollama HTTP API\n/api/embed\nall-minilm (default)"]
     end
 
     HYBRID --> OLLAMA
 
-    subgraph Sources["Data Sources (ingested offline)"]
-        RH["docs.redhat.com\nOCP 4.22"]
-        GH["github.com/openshift/*\n(27 repos)"]
-        TELCO["openshift-kni/\ntelco-reference\nrelease-4.22"]
+    subgraph Sources["Data Sources (ingested offline, config-driven)"]
+        GHDOCS["openshift-docs\n(GitHub, per-version branch)"]
+        GH["openshift/* repos\n(27, incl. Go source)"]
+        TELCO["openshift-kni/\ntelco-reference\n(entire repo)"]
+        ACM["stolostron/\nrhacm-docs"]
     end
 
-    RH -.->|"scrape + chunk"| C1
+    GHDOCS -.->|"clone + chunk"| C1
     GH -.->|"clone + go/parser"| C2
-    TELCO -.->|"clone + load YAML"| C3
+    TELCO -.->|"clone + YAML/MD/Go"| C3
+    ACM -.->|"clone + chunk"| C6
 
     subgraph MCP["Optional: Standalone MCP Server"]
         SRV["ocp-rag-server\n(stdio transport)"]
@@ -401,9 +427,10 @@ flowchart LR
         T4["troubleshoot_operator"]
         T5["get_operator_info"]
         T6["search_known_issues"]
-        T7["search_errata"]
-        T8["update_rag"]
-        SRV --> T1 & T2 & T3 & T4 & T5 & T6 & T7 & T8
+        T7["search_acm_docs"]
+        T8["search_errata"]
+        T9["update_rag"]
+        SRV --> T1 & T2 & T3 & T4 & T5 & T6 & T7 & T8 & T9
     end
 
     SRV --> ENGINE
@@ -414,11 +441,61 @@ flowchart LR
     classDef embed fill:#e91e63,stroke:#c2185b,color:#fff
     classDef mcp fill:#9b59b6,stroke:#7d3c98,color:#fff
     class ENGINE,HYBRID go
-    class CHROMEM,C1,C2,C3,C4,C5 store
-    class RH,GH,TELCO source
+    class VS,CHROMEM,QD,C1,C2,C3,C4,C5,C6 store
+    class GHDOCS,GH,TELCO,ACM source
     class OLLAMA embed
-    class SRV,T1,T2,T3,T4,T5,T6,T7,T8 mcp
+    class SRV,T1,T2,T3,T4,T5,T6,T7,T8,T9 mcp
 ```
+
+## Vector Store Backends
+
+The pluggable backend (`internal/rag/vectorstore.go`) lets the RAG stack run either fully
+self-contained or against a shared external vector database, without any change to the engine
+or ingestion code.
+
+```mermaid
+flowchart TD
+    CFG["rag-config.yaml\nvector_store.backend"] --> SEL{{"NewVectorStore()"}}
+
+    SEL -->|"unset / chromem"| CHROMEM
+    SEL -->|"qdrant"| QD
+
+    subgraph Embedded["chromem-go (default)"]
+        CHROMEM["*Store\n(store.go)"]
+        CFILE[("rag-data/chromem\non-disk, in-process")]
+        CHROMEM --> CFILE
+    end
+
+    subgraph External["Qdrant (store_qdrant.go)"]
+        QD["qdrantStore\n(REST client)"]
+        QOPTS["url · api_key\ncollection_prefix\ndistance · timeout"]
+        QSVC[("Qdrant service\nHTTP :6333")]
+        QD --> QOPTS
+        QD -.->|"api-key header"| QSVC
+    end
+
+    ENVQ["Env overrides:\nOCP_RAG_VECTORSTORE_BACKEND\nOCP_RAG_QDRANT_URL\nOCP_RAG_QDRANT_API_KEY"] -.-> SEL
+
+    classDef cfg fill:#f39c12,stroke:#d68910,color:#fff
+    classDef embedded fill:#2c3e50,stroke:#1a252f,color:#fff
+    classDef external fill:#e91e63,stroke:#c2185b,color:#fff
+    class CFG,SEL,ENVQ cfg
+    class CHROMEM,CFILE embedded
+    class QD,QOPTS,QSVC external
+```
+
+**When to use which:**
+
+| | chromem-go (default) | Qdrant |
+|---|---|---|
+| Deployment | Embedded, on-disk (`rag-data/chromem`) | External service (self-hosted or Qdrant Cloud) |
+| Dependencies | None | Running Qdrant endpoint |
+| Sharing | Single process | Shared across instances (via `collection_prefix`) |
+| Auth | — | `api_key` header |
+| Config key | `backend: chromem` | `backend: qdrant` + `vector_store.qdrant.*` |
+
+Both backends compute embeddings locally with the same `EmbeddingFunc` (Ollama), so switching
+backends does not change retrieval semantics — only where vectors are stored and searched.
 
 ## Data Source Abstraction
 
@@ -498,7 +575,7 @@ graph TD
         telco
         testfixture
         claudeapi
-        rag["rag\n(embedded RAG engine\n+ chromem-go)"]
+        rag["rag\n(RAG engine, pluggable\nchromem-go / Qdrant)"]
     end
 
     subgraph Mid["Mid-Level Packages"]
